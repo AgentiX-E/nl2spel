@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+results.json
+coverage/
+
+# Internal non-user-facing agent documents (must never be committed)
+RULE_VERIFICATION.md
+AUDIT_REPORT.md
+AGENT_NOTES.md
+PHASE_PLAN.md
+ITERATION_LOG.md
+*.agent.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

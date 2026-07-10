@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# Husky pre-commit hook — local=CI zero drift
+# Same checks as CI quality gate: typecheck + format-check
+
+echo "🔍 Running pre-commit quality gate (local=CI)..."
+
+# TypeScript typecheck (same as CI)
+echo "→ TypeScript typecheck..."
+pnpm -r run typecheck
+TYPECHECK_EXIT=$?
+if [ $TYPECHECK_EXIT -ne 0 ]; then
+  echo "❌ TypeScript typecheck failed. Fix errors before committing."
+  exit 1
+fi
+
+# Format check (same as CI)
+echo "→ Format check (Prettier)..."
+pnpm format:check
+FORMAT_EXIT=$?
+if [ $FORMAT_EXIT -ne 0 ]; then
+  echo "❌ Format check failed. Run 'pnpm format' to fix."
+  exit 1
+fi
+
+echo "✅ Pre-commit gate passed."

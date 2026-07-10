@@ -1,0 +1,39 @@
+{
+  "name": "@agentix-e/nl2spel",
+  "version": "0.1.0",
+  "description": "Natural Language → SpEL Expression Generation Engine — Core",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": ["spel", "nlp", "expression-language", "spring", "nl2code", "agentix"],
+  "license": "MIT",
+  "author": "Agentix-E",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgentiX-E/nl2spel.git",
+    "directory": "packages/nl2spel"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

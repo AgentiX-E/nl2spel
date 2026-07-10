@@ -1,0 +1,47 @@
+{
+  "name": "@agentix-e/nl2spel-webllm",
+  "version": "0.1.0",
+  "description": "WebLLM browser-local provider for @agentix-e/nl2spel",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@agentix-e/nl2spel": "workspace:*",
+    "@mlc-ai/web-llm": "^0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@mlc-ai/web-llm": { "optional": false }
+  },
+  "devDependencies": {
+    "@agentix-e/nl2spel": "workspace:*",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": ["spel", "webllm", "browser", "local-llm", "nlp", "expression-language", "agentix"],
+  "license": "MIT",
+  "author": "Agentix-E",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgentiX-E/nl2spel.git",
+    "directory": "packages/nl2spel-webllm"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

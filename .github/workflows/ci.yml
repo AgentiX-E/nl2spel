@@ -1,0 +1,250 @@
+name: CI
+
+# Single unified CI workflow — lint, test, coverage, typecheck, benchmark
+# local=CI zero drift: same commands as local pre-commit hooks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===== Core quality gates =====
+  quality:
+    name: Lint & TypeCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TypeScript typecheck (all packages)
+        run: pnpm -r run typecheck
+
+      - name: Format check (Prettier)
+        run: pnpm format:check
+
+  # ===== Tests with coverage =====
+  test:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [quality]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run tests with coverage
+        run: |
+          pnpm -r run test -- --coverage --reporter=verbose
+
+      - name: Generate coverage summary
+        if: always()
+        run: |
+          echo "# Coverage Report" > coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "| Package | Statements | Branches | Functions | Lines |" >> coverage-summary.md
+          echo "|---------|-----------|----------|-----------|-------|" >> coverage-summary.md
+          for pkg in packages/nl2spel packages/nl2spel-openai packages/nl2spel-webllm; do
+            if [ -f "$pkg/coverage/coverage-summary.json" ]; then
+              name=$(basename $pkg)
+              stmts=$(jq -r '.total.statements.pct' $pkg/coverage/coverage-summary.json 2>/dev/null || echo "N/A")
+              branches=$(jq -r '.total.branches.pct' $pkg/coverage/coverage-summary.json 2>/dev/null || echo "N/A")
+              funcs=$(jq -r '.total.functions.pct' $pkg/coverage/coverage-summary.json 2>/dev/null || echo "N/A")
+              lines=$(jq -r '.total.lines.pct' $pkg/coverage/coverage-summary.json 2>/dev/null || echo "N/A")
+              echo "| $name | $stmts% | $branches% | $funcs% | $lines% |" >> coverage-summary.md
+            fi
+          done
+
+      - name: Upload coverage artifact (for Pages)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            packages/*/coverage/
+            coverage-summary.md
+          retention-days: 7
+
+  # ===== Benchmark =====
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run performance benchmarks
+        run: |
+          echo "Pattern Matching Benchmarks:" > benchmark-results.txt
+          echo "" >> benchmark-results.txt
+          node -e "
+            const { PatternMatcher } = require('packages/nl2spel/dist/pattern/pattern-matcher.js');
+            const { BUILTIN_PATTERNS } = require('packages/nl2spel/dist/pattern/builtin-patterns.js');
+            const m = new PatternMatcher(BUILTIN_PATTERNS);
+            const inputs = ['订单金额大于1000', 'amount > 500', '备注为空', '用户是VIP'];
+            const start = Date.now();
+            for (let i = 0; i < 1000; i++) {
+              for (const input of inputs) {
+                m.match(input);
+              }
+            }
+            const elapsed = Date.now() - start;
+            console.log('4000 pattern matches:', elapsed + 'ms');
+            console.log('Average:', (elapsed / 4000).toFixed(3) + 'ms per match');
+
+            const { IntentClassifier } = require('packages/nl2spel/dist/template/intent-classifier.js');
+            const c = new IntentClassifier();
+            const intStart = Date.now();
+            for (let i = 0; i < 500; i++) {
+              for (const input of inputs) {
+                c.classify(input);
+              }
+            }
+            const intElapsed = Date.now() - intStart;
+            console.log('');
+            console.log('Intent Classification Benchmarks:');
+            console.log('2000 classifications:', intElapsed + 'ms');
+            console.log('Average:', (intElapsed / 2000).toFixed(3) + 'ms per classification');
+          " >> benchmark-results.txt
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.txt
+          retention-days: 7
+
+  # ===== TypeDoc API =====
+  docs:
+    name: Generate API Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Generate TypeDoc API documentation
+        run: |
+          mkdir -p api-docs
+          for pkg in packages/nl2spel packages/nl2spel-openai packages/nl2spel-webllm; do
+            npx typedoc --out api-docs/$(basename $pkg) --entryPoints $pkg/src/index.ts --tsconfig $pkg/tsconfig.json 2>/dev/null || echo "TypeDoc generation for $(basename $pkg) skipped"
+          done
+          # Create index page
+          echo '<!DOCTYPE html><html><head><title>NL2SpEL API Docs</title></head><body><h1>NL2SpEL API Documentation</h1><ul><li><a href="nl2spel/">@agentix-e/nl2spel</a></li><li><a href="nl2spel-openai/">@agentix-e/nl2spel-openai</a></li><li><a href="nl2spel-webllm/">@agentix-e/nl2spel-webllm</a></li></ul></body></html>' > api-docs/index.html
+
+      - name: Upload API docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: api-docs/
+          retention-days: 7
+
+  # ===== Publish to GitHub Pages =====
+  pages:
+    name: Publish to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [test, benchmark, docs]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Prepare pages structure
+        run: |
+          mkdir -p public/coverage public/api public/benchmark
+          # Coverage
+          if [ -d coverage-report ]; then
+            for pkg_dir in coverage-report/packages/*/coverage; do
+              pkg_name=$(basename $(dirname $pkg_dir))
+              cp -r $pkg_dir/* public/coverage/$pkg_name/ 2>/dev/null || true
+            done
+            cp coverage-report/coverage-summary.md public/coverage/index.md 2>/dev/null || true
+          fi
+          # API docs
+          if [ -d api-docs ]; then
+            cp -r api-docs/* public/api/
+          fi
+          # Benchmark
+          if [ -f benchmark-results/benchmark-results.txt ]; then
+            cp benchmark-results/benchmark-results.txt public/benchmark/
+          fi
+          # Index
+          echo '<!DOCTYPE html><html><head><title>NL2SpEL Reports</title></head><body><h1>NL2SpEL Project Reports</h1><ul><li><a href="coverage/">Coverage Report</a></li><li><a href="api/">API Documentation</a></li><li><a href="benchmark/benchmark-results.txt">Benchmark Results</a></li></ul></body></html>' > public/index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,49 @@
+{
+  "name": "@agentix-e/nl2spel-openai",
+  "version": "0.1.0",
+  "description": "OpenAI-compatible LLM provider for @agentix-e/nl2spel",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@agentix-e/nl2spel": "workspace:*",
+    "ai": "^4.0.0",
+    "@ai-sdk/openai": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ai": { "optional": false },
+    "@ai-sdk/openai": { "optional": false }
+  },
+  "devDependencies": {
+    "@agentix-e/nl2spel": "workspace:*",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "keywords": ["spel", "openai", "llm", "nlp", "expression-language", "agentix"],
+  "license": "MIT",
+  "author": "Agentix-E",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgentiX-E/nl2spel.git",
+    "directory": "packages/nl2spel-openai"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

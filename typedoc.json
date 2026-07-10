@@ -1,0 +1,32 @@
+{
+  "entryPoints": [
+    "packages/nl2spel/src/index.ts",
+    "packages/nl2spel-openai/src/index.ts",
+    "packages/nl2spel-webllm/src/index.ts"
+  ],
+  "out": "docs/api",
+  "name": "NL2SpEL API Documentation",
+  "tsconfig": "tsconfig.base.json",
+  "exclude": ["**/node_modules/**", "**/__tests__/**", "**/*.test.ts", "**/*.spec.ts"],
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "includeVersion": true,
+  "readme": "README.md",
+  "plugin": [],
+  "sort": ["source-order"],
+  "categorizeByGroup": true,
+  "categoryOrder": ["Core", "Provider", "Validation", "Utilities", "*"],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "visibilityFilters": {
+    "protected": true,
+    "private": false,
+    "inherited": true,
+    "external": false
+  },
+  "searchInComments": true,
+  "searchInDocuments": true
+}
