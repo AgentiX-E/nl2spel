@@ -219,23 +219,11 @@ export class GBNFGenerator {
     const uniqueIds = [...new Set(identifiers)];
 
     // Generate identifier rule (GBNF string alternation)
-    if (uniqueIds.length > 0) {
-      const idRules = uniqueIds.map(id => `"${id}"`).join(' | ');
-      rules.push(`identifier ::= (${idRules}) | general-identifier`);
-      rules.push('general-identifier ::= letter (letter-or-digit | underscore)*');
-    } else {
-      rules.push('identifier ::= letter (letter-or-digit | underscore)*');
-    }
+    const idRules = uniqueIds.map(id => `"${id}"`).join(' | ');
+    rules.push(`identifier ::= (${idRules}) | general-identifier`);
+    rules.push('general-identifier ::= letter (letter-or-digit | underscore)*');
 
     // root-field: inject root object fields (makes grammar constraints more precise)
-    if (schema.root && schema.root.fields) {
-      const fieldNames = Object.keys(schema.root.fields);
-      if (fieldNames.length > 0) {
-        const fieldRule = fieldNames.map(f => `"${f}"`).join(' | ');
-        // GBNF does not support nested references, so we use a flat approach
-        // root-field is used in expression via field-ref
-      }
-    }
 
     rules.push('qualified-identifier ::= identifier ("." identifier)*');
 

@@ -348,5 +348,13 @@ describe('GBNFGenerator', () => {
       expect(structure.sections.length).toBeGreaterThan(0);
       expect(structure.ruleCount).toBeGreaterThan(10);
     });
+
+    it('generateStructured with schema should set context and generate', () => {
+      const gen = new GBNFGenerator();
+      const structure = gen.generateStructured(TEST_SCHEMA);
+      expect(structure.rootRule).toContain('root ::=');
+      expect(structure.sections.length).toBeGreaterThan(0);
+      expect(structure.ruleCount).toBeGreaterThan(10);
+    });
   });
 });
