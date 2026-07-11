@@ -5,9 +5,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -64,6 +64,8 @@ jobs:
       - name: Run tests with coverage
         run: |
           pnpm -r run test -- --coverage --reporter=verbose
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
       - name: Generate coverage summary
         if: always()
@@ -114,39 +116,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Run performance benchmarks
-        run: |
-          echo "Pattern Matching Benchmarks:" > benchmark-results.txt
-          echo "" >> benchmark-results.txt
-          node -e "
-            const { PatternMatcher } = require('packages/nl2spel/dist/pattern/pattern-matcher.js');
-            const { BUILTIN_PATTERNS } = require('packages/nl2spel/dist/pattern/builtin-patterns.js');
-            const m = new PatternMatcher(BUILTIN_PATTERNS);
-            const inputs = ['订单金额大于1000', 'amount > 500', '备注为空', '用户是VIP'];
-            const start = Date.now();
-            for (let i = 0; i < 1000; i++) {
-              for (const input of inputs) {
-                m.match(input);
-              }
-            }
-            const elapsed = Date.now() - start;
-            console.log('4000 pattern matches:', elapsed + 'ms');
-            console.log('Average:', (elapsed / 4000).toFixed(3) + 'ms per match');
+      - name: Build core package for benchmark
+        run: pnpm --filter @agentix-e/nl2spel build
 
-            const { IntentClassifier } = require('packages/nl2spel/dist/template/intent-classifier.js');
-            const c = new IntentClassifier();
-            const intStart = Date.now();
-            for (let i = 0; i < 500; i++) {
-              for (const input of inputs) {
-                c.classify(input);
-              }
-            }
-            const intElapsed = Date.now() - intStart;
-            console.log('');
-            console.log('Intent Classification Benchmarks:');
-            console.log('2000 classifications:', intElapsed + 'ms');
-            console.log('Average:', (intElapsed / 2000).toFixed(3) + 'ms per classification');
-          " >> benchmark-results.txt
+      - name: Run performance benchmarks
+        run: node packages/nl2spel/benchmark.mjs > benchmark-results.txt
 
       - name: Upload benchmark artifact
         uses: actions/upload-artifact@v4
@@ -186,7 +160,7 @@ jobs:
             npx typedoc --out api-docs/$(basename $pkg) --entryPoints $pkg/src/index.ts --tsconfig $pkg/tsconfig.json 2>/dev/null || echo "TypeDoc generation for $(basename $pkg) skipped"
           done
           # Create index page
-          echo '<!DOCTYPE html><html><head><title>NL2SpEL API Docs</title></head><body><h1>NL2SpEL API Documentation</h1><ul><li><a href="nl2spel/">@agentix-e/nl2spel</a></li><li><a href="nl2spel-openai/">@agentix-e/nl2spel-openai</a></li><li><a href="nl2spel-webllm/">@agentix-e/nl2spel-webllm</a></li></ul></body></html>' > api-docs/index.html
+          echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>NL2SpEL API Docs</title><style>body{font-family:system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 20px;line-height:1.6;color:#24292e}a{color:#0969da}ul{list-style:none;padding:0}li{margin:12px 0;padding:12px 16px;border:1px solid #d0d7de;border-radius:6px}li:hover{background:#f6f8fa}</style></head><body><h1>📚 NL2SpEL API Documentation</h1><p>Auto-generated TypeDoc API reference for all NL2SpEL packages.</p><ul><li><a href="nl2spel/">@agentix-e/nl2spel</a> — Core Engine</li><li><a href="nl2spel-openai/">@agentix-e/nl2spel-openai</a> — LLM API Provider</li><li><a href="nl2spel-webllm/">@agentix-e/nl2spel-webllm</a> — Browser-local LLM</li></ul><p style="margin-top:24px;font-size:14px;color:#57606a">Generated at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}</p></body></html>' > api-docs/index.html
 
       - name: Upload API docs artifact
         uses: actions/upload-artifact@v4
@@ -201,7 +175,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [test, benchmark, docs]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     permissions:
       pages: write
@@ -212,30 +186,293 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
 
       - name: Prepare pages structure
         run: |
-          mkdir -p public/coverage public/api public/benchmark
-          # Coverage
+          mkdir -p public/coverage public/api public/benchmark public/guide
+
+          # ================================================================
+          # Coverage Report
+          # ================================================================
           if [ -d coverage-report ]; then
+            # Copy per-package coverage HTML reports
             for pkg_dir in coverage-report/packages/*/coverage; do
               pkg_name=$(basename $(dirname $pkg_dir))
-              cp -r $pkg_dir/* public/coverage/$pkg_name/ 2>/dev/null || true
+              mkdir -p "public/coverage/$pkg_name"
+              cp -r "$pkg_dir"/* "public/coverage/$pkg_name/" 2>/dev/null || true
             done
-            cp coverage-report/coverage-summary.md public/coverage/index.md 2>/dev/null || true
+            # Copy coverage summary
+            cp coverage-report/coverage-summary.md public/coverage/ 2>/dev/null || true
+
+            # Generate coverage overview HTML page
+            cat > public/coverage/index.html << 'COVEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>NL2SpEL — Coverage Report</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #24292e; }
+              a { color: #0969da; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              h1 { border-bottom: 2px solid #0969da; padding-bottom: 8px; }
+              table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+              th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #d0d7de; }
+              th { background: #f6f8fa; font-weight: 600; }
+              .pass { color: #1a7f37; font-weight: 600; }
+              .warn { color: #9a6700; font-weight: 600; }
+              .fail { color: #cf222e; font-weight: 600; }
+              nav { margin-bottom: 24px; }
+              nav a { margin-right: 16px; padding: 6px 12px; background: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de; }
+              nav a:hover { background: #0969da; color: #fff; text-decoration: none; }
+              footer { margin-top: 40px; font-size: 12px; color: #57606a; border-top: 1px solid #d0d7de; padding-top: 16px; }
+            </style>
+          </head>
+          <body>
+            <nav>
+              <a href="/nl2spel/">Home</a>
+              <a href="/nl2spel/coverage/">Coverage</a>
+              <a href="/nl2spel/api/">API Docs</a>
+              <a href="/nl2spel/benchmark/">Benchmark</a>
+              <a href="/nl2spel/guide/">User Guide</a>
+            </nav>
+            <h1>📊 Coverage Report</h1>
+            <p>Detailed test coverage reports for all NL2SpEL packages.</p>
+            <h2>Summary</h2>
+            <table>
+              <tr><th>Package</th><th>Coverage Report</th></tr>
+              <tr><td>@agentix-e/nl2spel</td><td><a href="nl2spel/">View HTML Report →</a></td></tr>
+              <tr><td>@agentix-e/nl2spel-openai</td><td><a href="nl2spel-openai/">View HTML Report →</a></td></tr>
+              <tr><td>@agentix-e/nl2spel-webllm</td><td><a href="nl2spel-webllm/">View HTML Report →</a></td></tr>
+            </table>
+            <p><a href="coverage-summary.md">Raw Coverage Summary (Markdown) →</a></p>
+            <footer>Generated by CI on master branch</footer>
+          </body>
+          </html>
+          COVEOF
           fi
-          # API docs
+
+          # ================================================================
+          # API Documentation
+          # ================================================================
           if [ -d api-docs ]; then
             cp -r api-docs/* public/api/
           fi
-          # Benchmark
+
+          # ================================================================
+          # Benchmark Report
+          # ================================================================
           if [ -f benchmark-results/benchmark-results.txt ]; then
             cp benchmark-results/benchmark-results.txt public/benchmark/
+
+            # Generate benchmark HTML page
+            cat > public/benchmark/index.html << 'BENCHEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>NL2SpEL — Benchmark Report</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #24292e; }
+              h1 { border-bottom: 2px solid #0969da; padding-bottom: 8px; }
+              nav { margin-bottom: 24px; }
+              nav a { margin-right: 16px; padding: 6px 12px; background: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de; }
+              nav a:hover { background: #0969da; color: #fff; text-decoration: none; }
+              pre { background: #f6f8fa; padding: 20px; border-radius: 6px; overflow-x: auto; font-size: 14px; border: 1px solid #d0d7de; }
+              footer { margin-top: 40px; font-size: 12px; color: #57606a; border-top: 1px solid #d0d7de; padding-top: 16px; }
+            </style>
+          </head>
+          <body>
+            <nav>
+              <a href="/nl2spel/">Home</a>
+              <a href="/nl2spel/coverage/">Coverage</a>
+              <a href="/nl2spel/api/">API Docs</a>
+              <a href="/nl2spel/benchmark/">Benchmark</a>
+              <a href="/nl2spel/guide/">User Guide</a>
+            </nav>
+            <h1>⚡ Performance Benchmark</h1>
+            <pre>
+          BENCHEOF
+            cat benchmark-results/benchmark-results.txt >> public/benchmark/index.html
+            cat >> public/benchmark/index.html << 'BENCHEOF2'
+          </pre>
+            <p><a href="benchmark-results.txt">View Raw Results →</a></p>
+            <footer>Generated by CI on master branch</footer>
+          </body>
+          </html>
+          BENCHEOF2
           fi
-          # Index
-          echo '<!DOCTYPE html><html><head><title>NL2SpEL Reports</title></head><body><h1>NL2SpEL Project Reports</h1><ul><li><a href="coverage/">Coverage Report</a></li><li><a href="api/">API Documentation</a></li><li><a href="benchmark/benchmark-results.txt">Benchmark Results</a></li></ul></body></html>' > public/index.html
+
+          # ================================================================
+          # User Guide (from README.md)
+          # ================================================================
+          if [ -f README.md ]; then
+            # Use pandoc-style approach: wrap README.md content in HTML
+            # Since we may not have markdown converter, we use a simple approach
+            cat > public/guide/index.html << 'GUIDEEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>NL2SpEL — User Guide</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #24292e; }
+              h1 { border-bottom: 2px solid #0969da; padding-bottom: 8px; }
+              h2 { margin-top: 28px; border-bottom: 1px solid #d0d7de; padding-bottom: 6px; }
+              pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; border: 1px solid #d0d7de; }
+              code { background: #f6f8fa; padding: 2px 6px; border-radius: 4px; font-size: 90%; }
+              table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+              th, td { padding: 8px 14px; text-align: left; border-bottom: 1px solid #d0d7de; }
+              th { background: #f6f8fa; font-weight: 600; }
+              nav { margin-bottom: 24px; }
+              nav a { margin-right: 16px; padding: 6px 12px; background: #f6f8fa; border-radius: 6px; border: 1px solid #d0d7de; }
+              nav a:hover { background: #0969da; color: #fff; text-decoration: none; }
+              blockquote { border-left: 4px solid #0969da; padding: 0 16px; color: #57606a; margin: 16px 0; }
+              footer { margin-top: 40px; font-size: 12px; color: #57606a; border-top: 1px solid #d0d7de; padding-top: 16px; }
+              hr { border: none; border-top: 1px solid #d0d7de; margin: 24px 0; }
+            </style>
+          </head>
+          <body>
+            <nav>
+              <a href="/nl2spel/">Home</a>
+              <a href="/nl2spel/coverage/">Coverage</a>
+              <a href="/nl2spel/api/">API Docs</a>
+              <a href="/nl2spel/benchmark/">Benchmark</a>
+              <a href="/nl2spel/guide/">User Guide</a>
+            </nav>
+          GUIDEEOF
+            # Simple Markdown → HTML conversion (supports basic elements)
+            python3 -c "
+          import re, sys
+          md = open('README.md').read()
+          # Code fence blocks → <pre><code>
+          md = re.sub(r'\`\`\`(\w+)?\n(.*?)\`\`\`', lambda m: '<pre><code>' + m.group(2) + '</code></pre>', md, flags=re.DOTALL)
+          # Inline code
+          md = re.sub(r'\`([^\`]+)\`', r'<code>\1</code>', md)
+          # Headers (reverse order to avoid h1-capture)
+          md = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', md, flags=re.M)
+          md = re.sub(r'^### (.+)$', r'<h3>\1</h3>', md, flags=re.M)
+          md = re.sub(r'^## (.+)$', r'<h2>\1</h2>', md, flags=re.M)
+          md = re.sub(r'^# (.+)$', r'<h1>\1</h1>', md, flags=re.M)
+          # Horizontal rule
+          md = re.sub(r'^---$', '<hr>', md, flags=re.M)
+          # Bold
+          md = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', md)
+          # Links
+          md = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href=\"\2\">\1</a>', md)
+          # Blockquote
+          md = re.sub(r'^> (.*)$', r'<blockquote><p>\1</p></blockquote>', md, flags=re.M)
+          # Table rows
+          md = re.sub(r'^\|(.+)\|$', lambda m: '<tr>' + ''.join(['<td>' + c.strip() + '</td>' if not c.strip().startswith('---') and '---' in c else '<th>' + c.strip().replace('---', '') + '</th>' for c in m.group(1).split('|')]) + '</tr>', md, flags=re.M)
+          # Wrap table rows in <table>
+          lines = md.split('\n')
+          out = []
+          in_table = False
+          for line in lines:
+              if line.startswith('<tr>'):
+                  if not in_table:
+                      out.append('<table>')
+                      in_table = True
+                  out.append(line)
+              elif in_table and not line.startswith('<tr>'):
+                  if line.strip():
+                      out.append(line)
+              else:
+                  if in_table:
+                      out.append('</table>')
+                      in_table = False
+                  if line.strip():
+                      out.append('<p>' + line + '</p>' if not line.startswith('<') else line)
+          if in_table:
+              out.append('</table>')
+          print('\n'.join(out))
+          " >> public/guide/index.html
+            cat >> public/guide/index.html << 'GUIDEEOF2'
+            <footer>Generated from <a href="https://github.com/AgentiX-E/nl2spel/blob/master/README.md">README.md</a> by CI</footer>
+          </body>
+          </html>
+          GUIDEEOF2
+          fi
+
+          # ================================================================
+          # Landing Page (index.html)
+          # ================================================================
+          cat > public/index.html << 'INDEXEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>NL2SpEL — Natural Language → SpEL Engine</title>
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              body { font-family: system-ui, -apple-system, sans-serif; color: #24292e; background: #fff; }
+              .hero { background: linear-gradient(135deg, #0969da 0%, #0550ae 100%); color: #fff; padding: 60px 20px; text-align: center; }
+              .hero h1 { font-size: 36px; margin-bottom: 12px; }
+              .hero p { font-size: 18px; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+              .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+              .card { border: 1px solid #d0d7de; border-radius: 8px; padding: 24px; transition: box-shadow 0.2s; }
+              .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+              .card h2 { font-size: 20px; margin-bottom: 8px; color: #0969da; }
+              .card p { color: #57606a; margin-bottom: 16px; line-height: 1.5; }
+              .card a { display: inline-block; padding: 8px 16px; background: #0969da; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 500; }
+              .card a:hover { background: #0550ae; }
+              .info { max-width: 1000px; margin: 0 auto 40px; padding: 0 20px; }
+              .status { display: flex; gap: 24px; flex-wrap: wrap; }
+              .status-item { display: flex; align-items: center; gap: 8px; }
+              .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+              .badge-green { background: #dafbe1; color: #1a7f37; }
+              .badge-blue { background: #ddf4ff; color: #0969da; }
+              footer { border-top: 1px solid #d0d7de; padding: 24px 20px; text-align: center; color: #57606a; font-size: 13px; max-width: 1000px; margin: 0 auto; }
+            </style>
+          </head>
+          <body>
+            <div class="hero">
+              <h1>NL2SpEL</h1>
+              <p>Natural Language → Spring Expression Language (SpEL) Generation Engine<br>Four-layer hybrid architecture supporting Chinese & English</p>
+            </div>
+
+            <div class="info" style="margin-top:32px">
+              <div class="status">
+                <div class="status-item"><span class="badge badge-green">CI Passing</span></div>
+                <div class="status-item"><span class="badge badge-blue">Coverage ≥95%</span></div>
+                <div class="status-item"><span class="badge badge-blue">MIT Licensed</span></div>
+              </div>
+            </div>
+
+            <div class="cards">
+              <div class="card">
+                <h2>📖 User Guide</h2>
+                <p>Installation, quick start, architecture overview, and development guide for all three packages.</p>
+                <a href="guide/">Read the Guide →</a>
+              </div>
+              <div class="card">
+                <h2>📚 API Documentation</h2>
+                <p>Auto-generated TypeDoc API reference for @agentix-e/nl2spel, nl2spel-openai, and nl2spel-webllm.</p>
+                <a href="api/">Browse API Docs →</a>
+              </div>
+              <div class="card">
+                <h2>📊 Coverage Report</h2>
+                <p>Per-package code coverage reports with line-by-line analysis. Target: ≥95% statements.</p>
+                <a href="coverage/">View Coverage →</a>
+              </div>
+              <div class="card">
+                <h2>⚡ Benchmark</h2>
+                <p>Performance benchmarks: pattern matching latency, intent classification speed, SLO verification.</p>
+                <a href="benchmark/">View Benchmarks →</a>
+              </div>
+            </div>
+
+            <footer>
+              <p><a href="https://github.com/AgentiX-E/nl2spel">github.com/AgentiX-E/nl2spel</a> — MIT © 2025 Agentix-E</p>
+            </footer>
+          </body>
+          </html>
+          INDEXEOF
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

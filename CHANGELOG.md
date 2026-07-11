@@ -41,7 +41,7 @@ All notable changes to the NL2SpEL project from v0.1.0 onward.
 - Zero API cost
 
 ### Engineering
-- 463 tests across 17 test files (388 core + 19 openai + 56 webllm)
+- 594 tests across 18 test files (502 core + 36 openai + 56 webllm)
 - TypeScript strict mode with zero errors
 - pnpm workspace monorepo structure
 - Zero external dependencies in core package

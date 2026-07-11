@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Husky pre-commit hook — local=CI zero drift
-# Same checks as CI quality gate: typecheck + format-check
+# Same checks as CI quality gate: typecheck + format-check + tests
 
 echo "🔍 Running pre-commit quality gate (local=CI)..."
 
@@ -20,6 +20,22 @@ FORMAT_EXIT=$?
 if [ $FORMAT_EXIT -ne 0 ]; then
   echo "❌ Format check failed. Run 'pnpm format' to fix."
   exit 1
+fi
+
+# Run tests in packages with changed files (same as CI test job)
+echo "→ Running tests (changed packages only)..."
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+if echo "$CHANGED_FILES" | grep -q "^packages/nl2spel/"; then
+  echo "  Testing @agentix-e/nl2spel..."
+  pnpm --filter @agentix-e/nl2spel test || exit 1
+fi
+if echo "$CHANGED_FILES" | grep -q "^packages/nl2spel-openai/"; then
+  echo "  Testing @agentix-e/nl2spel-openai..."
+  pnpm --filter @agentix-e/nl2spel-openai test || exit 1
+fi
+if echo "$CHANGED_FILES" | grep -q "^packages/nl2spel-webllm/"; then
+  echo "  Testing @agentix-e/nl2spel-webllm..."
+  pnpm --filter @agentix-e/nl2spel-webllm test || exit 1
 fi
 
 echo "✅ Pre-commit gate passed."

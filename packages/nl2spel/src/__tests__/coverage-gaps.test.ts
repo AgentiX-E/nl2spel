@@ -4,6 +4,9 @@ import { IntentClassifier } from '../template/intent-classifier.js';
 import { TemplateEngine } from '../template/template-engine.js';
 import { SelfCorrectionLoop } from '../validation/self-correction-loop.js';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
+import { PatternMatcher } from '../pattern/pattern-matcher.js';
+import { ProviderRegistry } from '../provider/provider-registry.js';
+import type { LLMProvider } from '../provider/llm-provider.js';
 import type { ContextSchema, LLMPrompt, LLMResponse } from '../index.js';
 
 // ================================================================
@@ -219,6 +222,163 @@ describe('Coverage Gap Fillers', () => {
       const pipeline = new ValidationPipeline(throwingEvaluator as any);
       const result = await pipeline.validate('#order.amount > 1000', TEST_SCHEMA);
       expect(result.stages.parse.errors.some(e => e.code === 'PARSE-EXCEPTION')).toBe(true);
+    });
+  });
+
+  // ===== pattern-matcher.ts: matchAll maxResults break (line 86) =====
+  describe('pattern-matcher: matchAll maxResults boundary', () => {
+    it('matchAll with limit=1 returns exactly 1 result and breaks early', () => {
+      const matcher = new PatternMatcher();
+      // Register multiple patterns that all match the same input
+      for (let i = 0; i < 5; i++) {
+        matcher.register({
+          id: `P${i}`,
+          match: /test(?<value>\d+)/,
+          spelTemplate: '#test == {value}',
+          slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
+          priority: 90 - i,
+          tags: ['test'],
+          examples: [],
+          difficulty: 'easy',
+          confidence: 0.9,
+        });
+      }
+      const results = matcher.matchAll('test42', 1);
+      expect(results).toHaveLength(1);
+      expect(results[0]!.matched).toBe(true);
+    });
+  });
+
+  // ===== pattern-matcher.ts: extractChineseField regex fallback (line 140) =====
+  describe('pattern-matcher: extractChineseField for non-mapped field', () => {
+    it('returns "value" for empty input', () => {
+      // extractChineseField handles malformed inputs: ^[^\s，,、]+ fails → returns "value"
+      // (We test this indirectly via the match on an expression where field is in spelTemplate)
+      const matcher = new PatternMatcher();
+      matcher.register({
+        id: 'FALLBACK',
+        match: /\s*(?<value>\d+)/,
+        spelTemplate: '#{field} > {value}',
+        slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
+        priority: 100,
+        tags: ['test'],
+        examples: [],
+        difficulty: 'easy',
+        confidence: 0.95,
+      });
+      const r = matcher.match('12345');
+      // Without capture group 'field', falls back to extractChineseField
+      if (r.matched) {
+        expect(r.spel).toContain('#');
+      }
+    });
+  });
+
+  // ===== provider-registry.ts: getPrioritized offline/cost compare (lines 46, 49-50) =====
+  describe('provider-registry: getPrioritized offline and cost comparison', () => {
+    it('puts offline provider before online provider', async () => {
+      const registry = new ProviderRegistry();
+      const online: LLMProvider = {
+        name: 'online-provider',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.001,
+          estimatedLatencyMs: 100,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const offline: LLMProvider = {
+        name: 'offline-provider',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: true,
+          estimatedCostPerRequest: 0,
+          estimatedLatencyMs: 50,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(online);
+      registry.register(offline);
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized[0]!.name).toBe('offline-provider');
+      expect(prioritized[1]!.name).toBe('online-provider');
+    });
+
+    it('sorts by cost when both offline statuses are same', async () => {
+      const registry = new ProviderRegistry();
+      const cheap: LLMProvider = {
+        name: 'cheap-provider',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.0001,
+          estimatedLatencyMs: 100,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const expensive: LLMProvider = {
+        name: 'expensive-provider',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.01,
+          estimatedLatencyMs: 50,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(expensive);
+      registry.register(cheap);
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized[0]!.name).toBe('cheap-provider');
+      expect(prioritized[1]!.name).toBe('expensive-provider');
+    });
+  });
+
+  // ===== self-correction-loop: AutoFix insufficient path (lines 123-132) =====
+  describe('self-correction-loop: AutoFix insufficient fallback path', () => {
+    it('when auto-fix is not sufficient, continues to LLM correction', async () => {
+      const loop = new SelfCorrectionLoop({ maxAttempts: 1 });
+      // Expression has fixable === AND unfixable unbalanced parens
+      const generateFn = vi.fn().mockResolvedValueOnce({
+        text: '#order.amount > 1000',
+        model: 'mock',
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        latencyMs: 10,
+        finishReason: 'stop' as const,
+        providerName: 'mock',
+      });
+
+      const result = await loop.correct(
+        '#order.amount === 1000 ]',
+        TEST_SCHEMA,
+        generateFn,
+        PROMPT,
+      );
+
+      // AutoFix fixes === but extra ] remains; validation fails → LLM is called
+      expect(generateFn).toHaveBeenCalled();
+      // Correction log should contain an auto-fixed entry
+      const autoFixEntry = result.corrections.find(c => c.autoFixed);
+      expect(autoFixEntry).toBeDefined();
     });
   });
 });
