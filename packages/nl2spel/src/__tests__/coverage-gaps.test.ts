@@ -522,4 +522,122 @@ describe('Coverage Gap Fillers', () => {
       expect(result.entities.some(e => e.type === 'operator' && e.text === '>=')).toBe(true);
     });
   });
+
+  // ===== intent-classifier.ts: boost conditions (lines 137,141,145,149) =====
+  describe('intent-classifier: intent boost conditions', () => {
+    it('boosts RANGE for between pattern', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('value between 10 and 20');
+      // RANGE should be the primary intent due to boost
+      expect(result.intents.some(i => i.intent === 'RANGE')).toBe(true);
+    });
+
+    it('boosts TYPE_CHECK for instanceof pattern', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('var instanceof T(String)');
+      expect(result.intents.some(i => i.intent === 'TYPE_CHECK')).toBe(true);
+    });
+
+    it('boosts TYPE_CHECK for 是否是...类型 pattern', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('变量是否是String类型');
+      expect(result.intents.some(i => i.intent === 'TYPE_CHECK')).toBe(true);
+    });
+
+    it('boosts PROJECTION for 每个 pattern', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('每个项目的名称');
+      expect(result.intents.some(i => i.intent === 'PROJECTION')).toBe(true);
+    });
+
+    it('boosts COLLECTION for isEmpty/.isEmpty keywords', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('myList.isEmpty()');
+      expect(result.intents.some(i => i.intent === 'COLLECTION')).toBe(true);
+    });
+
+    it('boosts COLLECTION for 列表 keyword', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('订单列表');
+      expect(result.intents.some(i => i.intent === 'COLLECTION')).toBe(true);
+    });
+  });
+
+  // ===== provider-registry.ts: same offline & same cost (lines 46, 49-50) =====
+  describe('provider-registry: same offline and same cost sorting', () => {
+    it('sorts by latency when both have same offline and same cost', async () => {
+      const registry = new ProviderRegistry();
+      const fast: LLMProvider = {
+        name: 'fast-same',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.001,
+          estimatedLatencyMs: 50,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const slow: LLMProvider = {
+        name: 'slow-same',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.001,
+          estimatedLatencyMs: 200,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(slow);
+      registry.register(fast);
+      const prioritized = await registry.getPrioritized();
+      // Same offline, same cost → sorted by latency (lower first)
+      expect(prioritized[0]!.name).toBe('fast-same');
+      expect(prioritized[1]!.name).toBe('slow-same');
+    });
+
+    it('handles undefined estimatedCostPerRequest as Infinity', async () => {
+      const registry = new ProviderRegistry();
+      const withCost: LLMProvider = {
+        name: 'with-cost',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.0001,
+          estimatedLatencyMs: 100,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const noCost: LLMProvider = {
+        name: 'no-cost',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: undefined as any,
+          estimatedLatencyMs: 50,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(noCost);
+      registry.register(withCost);
+      const prioritized = await registry.getPrioritized();
+      // Provider with cost (0.0001) < Infinity → with-cost first
+      expect(prioritized[0]!.name).toBe('with-cost');
+    });
+  });
 });
