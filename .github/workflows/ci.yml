@@ -184,7 +184,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
 
@@ -490,16 +490,30 @@ jobs:
         with:
           path: public
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages (workflow)
         id: deployment
         uses: actions/deploy-pages@v4
         continue-on-error: true
 
-      - name: Notice — Pages setup required
-        if: failure() && steps.deployment.conclusion == 'failure'
+      - name: Push to gh-pages branch (fallback)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true
+          enable_jekyll: false
+
+      - name: Deployment summary
+        if: always()
         run: |
-          echo "::warning title=GitHub Pages Setup Required::GitHub Pages is not yet enabled for this repository."
-          echo "::notice title=One-Time Setup::1. Go to https://github.com/AgentiX-E/nl2spel/settings/pages"
-          echo "::notice title=One-Time Setup::2. Under 'Build and deployment', set Source to 'GitHub Actions'"
-          echo "::notice title=One-Time Setup::3. Click Save. Next CI push will deploy to https://agentix-e.github.io/nl2spel/"
-          echo "::warning title=Artifact Ready::Pages artifact was successfully uploaded (run ${{ github.run_id }}). Once Pages is enabled, re-run this workflow to deploy."
+          if [ "${{ steps.deployment.outcome }}" = "success" ]; then
+            echo "✅ Pages deployed via workflow: ${{ steps.deployment.outputs.page_url }}"
+          else
+            echo "⚠️  Workflow deployment skipped (Pages may need manual setup)."
+            echo "📦 Content pushed to gh-pages branch as fallback."
+            echo "🌐 Expected URL: https://agentix-e.github.io/nl2spel/"
+            echo ""
+            echo "📋 If the site is not live, enable Pages in repo settings:"
+            echo "   Settings → Pages → Source: 'Deploy from a branch' → Branch: 'gh-pages' → Save"
+          fi
