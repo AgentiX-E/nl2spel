@@ -2,16 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { OpenAICompatibleProvider } from '../openai-compatible-provider.js';
 import { PROVIDER_PRESETS } from '../provider-presets.js';
 
-// Mock PromptBuilder for testing
-const mockPromptBuilder = {
-  build: vi.fn().mockReturnValue({
-    system: 'You are a SpEL expert.',
-    user: '金额大于1000',
-    contextSchema: { root: null, variables: {}, beans: {}, types: {}, functions: {} },
-    examples: [],
-  }),
-};
-
 describe('OpenAICompatibleProvider', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -195,7 +185,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       const response = await provider.generate(prompt, { timeout: 5000 });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -235,7 +225,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       const response = await provider.generate(prompt, { timeout: 5000, maxRetries: 1 });
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -251,7 +241,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       await expect(provider.generate(prompt, { timeout: 5000, maxRetries: 0 })).rejects.toThrow(
         'Network error',
       );
@@ -270,7 +260,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       await expect(provider.generate(prompt, { timeout: 5000, maxRetries: 0 })).rejects.toThrow(
         /API error.*401/,
       );
@@ -293,7 +283,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       await provider.generate(prompt, { timeout: 5000, model: 'custom-model' });
 
       const body = JSON.parse(mockFetch.mock.calls[0]![1]!.body as string);
@@ -317,7 +307,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       await provider.generate(prompt, {
         timeout: 5000,
         temperature: 0.5,
@@ -347,7 +337,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       const response = await provider.generate(prompt, { timeout: 5000, maxRetries: 0 });
 
       expect(response.usage.promptTokens).toBe(0);
@@ -388,7 +378,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       const chunks: string[] = [];
       for await (const chunk of provider.generateStream!(prompt, { timeout: 5000 })) {
         chunks.push(chunk.delta);
@@ -412,7 +402,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       await expect(async () => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const _ of provider.generateStream!(prompt, { timeout: 5000 })) {
@@ -433,7 +423,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       await expect(async () => {
         for await (const _ of provider.generateStream!(prompt, { timeout: 5000 })) {
           // trigger error
@@ -488,12 +478,127 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
 
-      const prompt = mockPromptBuilder.build('测试');
+      const prompt = createMockPromptBuilder().build('测试');
       await provider.generate(prompt, { timeout: 5000, maxRetries: 0 });
 
       const headers = mockFetch.mock.calls[0]![1]!.headers as Record<string, string>;
       expect(headers['X-Custom']).toBe('test-value');
       expect(headers['Authorization']).toBe('Bearer sk-test');
+    });
+  });
+
+  // === generate with examples injection (lines 121-126) ===
+  describe('generate with examples injection', () => {
+    it('should inject examples into user message when not already present', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: '#x > 0' }, finish_reason: 'stop' }],
+            model: 'test',
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const provider = new OpenAICompatibleProvider(
+        { provider: 'openai', apiKey: 'sk-test' },
+        createMockPromptBuilder(),
+      );
+
+      // Prompt with examples but user message doesn't contain 'Few-Shot'
+      const prompt = {
+        system: 'Generate SpEL.',
+        user: 'Convert NL to SpEL.',
+        contextSchema: { root: null, variables: {}, beans: {}, types: {}, functions: {} },
+        examples: [
+          {
+            nl: 'amount > 100',
+            spel: '#order.amount > 100',
+            difficulty: 'easy' as const,
+            category: 'cmp',
+          },
+        ],
+      };
+
+      await provider.generate(prompt, { timeout: 5000, maxRetries: 0 });
+
+      // Verify the fetch was called and succeeded
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT double-inject examples when user already contains Few-Shot', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: '#x > 0' }, finish_reason: 'stop' }],
+            model: 'test',
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const provider = new OpenAICompatibleProvider(
+        { provider: 'openai', apiKey: 'sk-test' },
+        createMockPromptBuilder(),
+      );
+
+      const prompt = {
+        system: 'Generate SpEL.',
+        user: '## Few-Shot Examples\nConvert NL to SpEL.',
+        contextSchema: { root: null, variables: {}, beans: {}, types: {}, functions: {} },
+        examples: [{ nl: 'test', spel: '#test', difficulty: 'easy' as const, category: 'cmp' }],
+      };
+
+      await provider.generate(prompt, { timeout: 5000, maxRetries: 0 });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // === generateStream malformed lines catch (line 261) ===
+  describe('generateStream malformed data handling', () => {
+    it('should skip malformed JSON lines in stream', async () => {
+      const mockReader = {
+        read: vi
+          .fn()
+          .mockResolvedValueOnce({
+            done: false,
+            value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"#test"}}]}\n'),
+          })
+          .mockResolvedValueOnce({
+            done: false,
+            value: new TextEncoder().encode('data: bad json here\n'),
+          })
+          .mockResolvedValueOnce({
+            done: false,
+            value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":" > 0"}}]}\n'),
+          })
+          .mockResolvedValueOnce({ done: false, value: new TextEncoder().encode('data: [DONE]\n') })
+          .mockResolvedValueOnce({ done: true, value: new Uint8Array() }),
+        releaseLock: vi.fn(),
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: { getReader: () => mockReader },
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const provider = new OpenAICompatibleProvider(
+        { provider: 'deepseek', apiKey: 'sk-test' },
+        createMockPromptBuilder(),
+      );
+
+      const prompt = createMockPromptBuilder().build('测试');
+      const chunks: string[] = [];
+      for await (const chunk of provider.generateStream!(prompt, { timeout: 5000 })) {
+        chunks.push(chunk.delta);
+      }
+
+      const fullText = chunks.join('');
+      expect(fullText).toContain('#test');
+      // Malformed line was silently skipped
     });
   });
 });

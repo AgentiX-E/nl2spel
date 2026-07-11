@@ -309,4 +309,44 @@ describe('GBNFGenerator', () => {
       expect(grammar).toContain('")"');
     });
   });
+
+  // ===== Coverage: else branch when no injectContext/schema =====
+  describe('GBNFGenerator — without context injection', () => {
+    it('should use generic identifier rule when injectContext is false', () => {
+      const gen = new GBNFGenerator({ injectContext: false });
+      const grammar = gen.generate(TEST_SCHEMA);
+      expect(grammar).toContain('identifier ::= letter');
+      expect(grammar).not.toContain('general-identifier');
+    });
+
+    it('should use generic identifier when no schema is set', () => {
+      const gen = new GBNFGenerator({ injectContext: true });
+      const grammar = gen.generate();
+      // Without schema, identifier rule is generic (no context-specific fields)
+      expect(grammar).toContain('identifier ::= letter');
+    });
+
+    it('should use restrictTo boolean for boolean expressions', () => {
+      const gen = new GBNFGenerator({ restrictTo: 'boolean' });
+      const grammar = gen.generate();
+      expect(grammar).toContain('root ::= boolean-expr');
+    });
+
+    it('setContext should update internal schema', () => {
+      const gen = new GBNFGenerator({ injectContext: true });
+      gen.setContext(TEST_SCHEMA);
+      const grammar = gen.generate();
+      // Should include context-specific identifiers
+      expect(grammar).toContain('"order"');
+      expect(grammar).toContain('"amount"');
+    });
+
+    it('generateStructured should include root rule and sections', () => {
+      const gen = new GBNFGenerator();
+      const structure = gen.generateStructured();
+      expect(structure.rootRule).toContain('root ::=');
+      expect(structure.sections.length).toBeGreaterThan(0);
+      expect(structure.ruleCount).toBeGreaterThan(10);
+    });
+  });
 });
