@@ -184,6 +184,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     permissions:
+      contents: read
       pages: write
       id-token: write
 
