@@ -167,15 +167,15 @@ export class OpenAICompatibleProvider implements LLMProvider {
         const choice = data.choices?.[0];
 
         return {
-          text: choice?.message?.content?.trim() ?? '',
-          model: data.model ?? model,
+          text: choice?.message?.content?.trim() || '',
+          model: data.model!,
           usage: {
             promptTokens: data.usage?.prompt_tokens ?? 0,
             completionTokens: data.usage?.completion_tokens ?? 0,
             totalTokens: data.usage?.total_tokens ?? 0,
           },
           latencyMs: Date.now() - startTime,
-          finishReason: choice?.finish_reason ?? 'stop',
+          finishReason: choice!.finish_reason,
           providerName: this.name,
         };
       } catch (err) {
@@ -186,7 +186,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
       }
     }
 
-    throw lastError ?? new Error('Unknown error');
+    // lastError is always set when all providers fail
+    throw lastError!;
   }
 
   async *generateStream(

@@ -42,13 +42,15 @@ export class ProviderRegistry {
     }
     return available.sort((a, b) => {
       // 1. Offline first
-      if (a.capabilities.offlineAvailable !== b.capabilities.offlineAvailable) {
-        return a.capabilities.offlineAvailable ? -1 : 1;
-      }
+      const aOffline = a.capabilities.offlineAvailable;
+      const bOffline = b.capabilities.offlineAvailable;
+      if (aOffline && !bOffline) return -1;
+      if (!aOffline && bOffline) return 1;
       // 2. Cheaper first
       const costA = a.capabilities.estimatedCostPerRequest ?? Infinity;
       const costB = b.capabilities.estimatedCostPerRequest ?? Infinity;
-      if (costA !== costB) return costA - costB;
+      if (costA < costB) return -1;
+      if (costB < costA) return 1;
       // 3. Lower latency first
       return a.capabilities.estimatedLatencyMs - b.capabilities.estimatedLatencyMs;
     });

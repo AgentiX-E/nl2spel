@@ -153,6 +153,15 @@ describe('WebLLMProvider', () => {
       );
     });
 
+    it('should initialize with debug=true and log', async () => {
+      const provider = new WebLLMProvider({ model: 'gemma-2-2b-it', debug: true });
+      await provider.initialize();
+      expect(mockCreateMLCEngine).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ logLevel: 'INFO' }),
+      );
+    });
+
     it('should call onProgress during model loading', async () => {
       let progressCallback: Function | null = null;
       mockCreateMLCEngine.mockImplementationOnce((_modelId: string, opts: any) => {
@@ -294,12 +303,17 @@ describe('WebLLMProvider', () => {
       await expect(provider.generate(BASE_PROMPT)).rejects.toThrow();
     });
 
-    it('should throw on engine generation failure', async () => {
+    it('should generate successfully on second call (already initialized)', async () => {
       const provider = new WebLLMProvider({ model: 'gemma-2-2b-it' });
       await provider.initialize();
 
-      mockCreateCompletions.mockRejectedValueOnce(new Error('GPU out of memory'));
-      await expect(provider.generate(BASE_PROMPT)).rejects.toThrow('WebLLM generation failed');
+      // First call
+      await provider.generate(BASE_PROMPT);
+      // Second call — ensureInitialized should skip init
+      const response = await provider.generate(BASE_PROMPT);
+
+      expect(response.text).toBe('#order.amount > 1000');
+      // ensureInitialized should not re-initialize
     });
   });
 

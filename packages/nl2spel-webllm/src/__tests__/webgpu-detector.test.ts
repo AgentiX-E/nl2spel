@@ -75,4 +75,18 @@ describe('detectWebGPU', () => {
     expect(result.available).toBe(false);
     expect(result.error).toContain('GPU crash');
   });
+
+  it('should use "unknown" fallback when adapter info fields are null', async () => {
+    const mockAdapterInfo = { vendor: null, architecture: null, description: null, device: null };
+    const mockAdapter = { requestAdapterInfo: vi.fn().mockResolvedValue(mockAdapterInfo) };
+    vi.stubGlobal('navigator', {
+      gpu: { requestAdapter: vi.fn().mockResolvedValue(mockAdapter) },
+    });
+
+    const result = await detectWebGPU();
+
+    expect(result.available).toBe(true);
+    expect(result.adapterInfo!.vendor).toBe('unknown');
+    expect(result.adapterInfo!.architecture).toBe('unknown');
+  });
 });

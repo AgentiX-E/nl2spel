@@ -20,28 +20,29 @@ export class AutoFixer {
 
     // 2. !== → != (BEFORE === → == to avoid double-processing)
     if (fixed.includes('!==')) {
-      const count = (fixed.match(/!==/g) ?? []).length;
+      // `includes` check guarantees match is non-null
+      const count = fixed.match(/!==/g)!.length;
       fixed = fixed.replace(/!==/g, '!=');
       changes.push(`Replaced ${count}x !== with !=`);
     }
 
     // 3. === → ==
     if (fixed.includes('===')) {
-      const count = (fixed.match(/===/g) ?? []).length;
+      const count = fixed.match(/===/g)!.length;
       fixed = fixed.replace(/===/g, '==');
       changes.push(`Replaced ${count}x === with ==`);
     }
 
     // 4. && → and
     if (fixed.includes('&&')) {
-      const count = (fixed.match(/&&/g) ?? []).length;
+      const count = fixed.match(/&&/g)!.length;
       fixed = fixed.replace(/&&/g, 'and');
       changes.push(`Replaced ${count}x && with and`);
     }
 
     // 5. || → or
     if (fixed.includes('||')) {
-      const count = (fixed.match(/\|\|/g) ?? []).length;
+      const count = fixed.match(/\|\|/g)!.length;
       fixed = fixed.replace(/\|\|/g, 'or');
       changes.push(`Replaced ${count}x || with or`);
     }

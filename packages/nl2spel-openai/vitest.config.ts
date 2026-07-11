@@ -10,7 +10,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/__tests__/**'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/__tests__/**',
+        // Re-export files (no executable code)
+        'src/index.ts',
+      ],
     },
     env: {
       DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY ?? '',
