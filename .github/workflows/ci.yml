@@ -34,6 +34,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Build core package (required for dependent packages typecheck)
+        run: pnpm --filter @agentix-e/nl2spel build
+
       - name: TypeScript typecheck (all packages)
         run: pnpm -r run typecheck
 
