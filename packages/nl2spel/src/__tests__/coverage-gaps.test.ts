@@ -6,6 +6,8 @@ import { SelfCorrectionLoop } from '../validation/self-correction-loop.js';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
 import { PatternMatcher } from '../pattern/pattern-matcher.js';
 import { ProviderRegistry } from '../provider/provider-registry.js';
+import { ChineseNumberParser } from '../utils/chinese-number-parser.js';
+import { NLIntent } from '../template/nl-intent.js';
 import type { LLMProvider } from '../provider/llm-provider.js';
 import type { ContextSchema, LLMPrompt, LLMResponse } from '../index.js';
 
@@ -379,6 +381,145 @@ describe('Coverage Gap Fillers', () => {
       // Correction log should contain an auto-fixed entry
       const autoFixEntry = result.corrections.find(c => c.autoFixed);
       expect(autoFixEntry).toBeDefined();
+    });
+  });
+
+  // ===== chinese-number-parser.ts: line 70 (unit undefined) =====
+  // Note: line 70 is unreachable because isChineseNumber pre-checks the same char set
+  describe('chinese-number-parser: edge cases', () => {
+    it('parse returns NaN for string with non-Chinese-num chars', () => {
+      const result = ChineseNumberParser.parse('一千二x百三四');
+      expect(Number.isNaN(result)).toBe(true);
+    });
+
+    it('parse returns NaN for entirely non-Chinese-num string', () => {
+      const result = ChineseNumberParser.parse('hello');
+      expect(Number.isNaN(result)).toBe(true);
+    });
+
+    it('parseSafe returns null for non-Chinese-num', () => {
+      const result = ChineseNumberParser.parseSafe('abc');
+      expect(result).toBeNull();
+    });
+
+    it('isChineseNumber returns true for valid Chinese numbers', () => {
+      expect(ChineseNumberParser.isChineseNumber('一千二百三十四')).toBe(true);
+    });
+
+    it('isChineseNumber returns false for mixed text', () => {
+      expect(ChineseNumberParser.isChineseNumber('12三十四')).toBe(false);
+    });
+  });
+
+  // ===== template-engine.ts: NOT_EMPTY selectBestTemplate boost (line 98) =====
+  describe('template-engine: NOT_EMPTY template selection boost', () => {
+    it('selects IS_EMPTY template for "is empty" input', () => {
+      const engine = new TemplateEngine();
+      const intent = {
+        primaryIntent: 'COLLECTION' as any,
+        intents: [{ intent: 'COLLECTION' as any, confidence: 0.9 }],
+        entities: [],
+        operators: [],
+        logicalConnectors: [],
+        complexity: 10,
+      };
+      const result = engine.generate('items is empty', intent);
+      expect(result).not.toBeNull();
+      if (result) {
+        expect(result.templateName).toBe('COLL-IS_EMPTY');
+      }
+    });
+
+    it('template with context schema matches field names', () => {
+      const schema: ContextSchema = {
+        root: {
+          name: 'order',
+          type: 'Order',
+          fields: {
+            amount: { type: 'number' },
+            status: { type: 'string' },
+          },
+          methods: {},
+        },
+        variables: {},
+        beans: {},
+        types: {},
+        functions: {},
+      };
+      const engine = new TemplateEngine(schema);
+      const intent = {
+        primaryIntent: 'COMPARISON' as any,
+        intents: [{ intent: 'COMPARISON' as any, confidence: 0.9 }],
+        entities: [{ text: '1000', type: 'value' as const, position: { start: 7, end: 11 } }],
+        operators: ['>'],
+        logicalConnectors: [],
+        complexity: 15,
+      };
+      const result = engine.generate('amount > 1000', intent);
+      expect(result).not.toBeNull();
+      if (result) {
+        // Field name "amount" should be matched from context schema
+        expect(result.expression).toContain('amount');
+      }
+    });
+
+    it('ELVIS template is selected for input with or/default keywords', () => {
+      const engine = new TemplateEngine();
+      const intent = {
+        primaryIntent: 'ELVIS' as any,
+        intents: [{ intent: 'ELVIS' as any, confidence: 0.8 }],
+        entities: [{ text: 'Guest', type: 'value' as const, position: { start: 15, end: 20 } }],
+        operators: [],
+        logicalConnectors: [],
+        complexity: 10,
+      };
+      const result = engine.generate('name or default Guest', intent);
+      expect(result).not.toBeNull();
+      if (result) {
+        expect(result.templateName).toBe('ELVIS-DEFAULT');
+        expect(result.expression).toContain('?:');
+      }
+    });
+
+    it('returns null for non-existent intent', () => {
+      const engine = new TemplateEngine();
+      const intent = {
+        primaryIntent: 'UNKNOWN' as any,
+        intents: [],
+        entities: [],
+        operators: [],
+        logicalConnectors: [],
+        complexity: 0,
+      };
+      const result = engine.generate('test', intent);
+      expect(result).toBeNull();
+    });
+  });
+
+  // ===== intent-classifier.ts: quoted string extraction (lines 211-216) =====
+  describe('intent-classifier: quoted string entity extraction', () => {
+    it('extracts entities from quoted strings', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify("status == 'active'");
+      // After normalize, text becomes lowercase
+      expect(
+        result.entities.some(e => e.type === 'value' && e.text.toLowerCase().includes('active')),
+      ).toBe(true);
+    });
+
+    it('extracts entities from double-quoted strings', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('name == "John"');
+      // After normalize, text becomes lowercase
+      expect(
+        result.entities.some(e => e.type === 'value' && e.text.toLowerCase().includes('john')),
+      ).toBe(true);
+    });
+
+    it('detects operator position in entities', () => {
+      const classifier = new IntentClassifier();
+      const result = classifier.classify('amount >= 100');
+      expect(result.entities.some(e => e.type === 'operator' && e.text === '>=')).toBe(true);
     });
   });
 });
