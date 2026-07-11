@@ -1,31 +1,31 @@
 # @agentix-e/nl2spel-openai
 
-> OpenAI 兼容 LLM Provider for @agentix-e/nl2spel
+> OpenAI-compatible LLM Provider for @agentix-e/nl2spel
 >
-> 7 个预配置 Provider · 自定义 API 支持 · 流式输出
+> 7 preset providers · Custom API support · Streaming output
 
 [![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel-openai)](https://www.npmjs.com/package/@agentix-e/nl2spel-openai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
 ---
 
-## API 文档
+## API Documentation
 
 → [nl2spel-openai API](https://agentix-e.github.io/nl2spel/api/modules/nl2spel_openai.html)
 
-## 预配置 Provider（7 个）
+## Preset Providers (7)
 
-| Provider | 模型 | 成本/请求 | 延迟 | 流式 |
+| Provider | Model | Cost/Request | Latency | Streaming |
 |----------|------|----------|------|------|
 | OpenAI | gpt-4o-mini | ~$0.0003 | 2s | ✅ |
 | DeepSeek | deepseek-chat | ~$0.0001 | 1.5s | ✅ |
-| GLM (智谱) | glm-4-flash | ~¥0.003 | 1.8s | ✅ |
-| Copilot | gpt-4o | 免费 | 2.5s | ✅ |
-| 混元 (腾讯) | hunyuan-lite | 免费 | 2s | ✅ |
+| GLM (Zhipu) | glm-4-flash | ~¥0.003 | 1.8s | ✅ |
+| Copilot | gpt-4o | Free | 2.5s | ✅ |
+| Hunyuan (Tencent) | hunyuan-lite | Free | 2s | ✅ |
 | MiniMax | abab6.5s-chat | ~$0.002 | 2.5s | ✅ |
 | Kimi | moonshot-v1-8k | ~$0.002 | 2s | ✅ |
 
-## 快速开始
+## Quick Start
 
 ```typescript
 import { NL2SpelEngine } from '@agentix-e/nl2spel';
@@ -39,13 +39,13 @@ engine.registerProvider(new OpenAICompatibleProvider({
   apiKey: 'sk-...',
 }));
 
-// DeepSeek（性价比最优）
+// DeepSeek (best value)
 engine.registerProvider(new OpenAICompatibleProvider({
   provider: 'deepseek',
   apiKey: 'sk-...',
 }));
 
-// 自定义 API
+// Custom API
 engine.registerProvider(new OpenAICompatibleProvider({
   custom: {
     name: 'my-llm',
@@ -62,10 +62,10 @@ engine.registerProvider(new OpenAICompatibleProvider({
 engine.registerProvider(new OpenAICompatibleProvider({ provider: 'openai', apiKey: '...' }));
 engine.registerProvider(new OpenAICompatibleProvider({ provider: 'deepseek', apiKey: '...' }));
 
-// 自动按成本从低到高 fallback
-const result = await engine.generate('复杂的多层嵌套表达式');
+// Auto fallback by cost from low to high
+const result = await engine.generate('Complex multi-level nested expression');
 ```
 
-## 许可证
+## License
 
 MIT © 2025 Agentix-E

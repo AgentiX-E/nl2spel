@@ -234,4 +234,87 @@ describe('ValidationPipeline', () => {
       expect(result.stages.parse.passed).toBe(true);
     });
   });
+
+  // ===== Edge Cases & Integration =====
+  describe('edge cases', () => {
+    it('should fail expression that is whitespace only after trim', async () => {
+      const result = await pipeline.validate('   ', schema);
+      expect(result.stages.parse.passed).toBe(false);
+      expect(result.errors.some(e => e.code === 'PARSE-EMPTY')).toBe(true);
+    });
+
+    it('should detect unbalanced curly braces', async () => {
+      const result = await pipeline.validate('#order.amount > 100}', schema);
+      expect(result.stages.parse.passed).toBe(false);
+      expect(result.errors.some(e => e.code === 'PARSE-UNBALANCED_PARENS')).toBe(true);
+    });
+
+    it('should handle instanceof with unknown type in ContextSchema', async () => {
+      // T() type validation is not part of the context check, so it should pass
+      const result = await pipeline.validate('#order instanceof T(com.example.Unknown)', schema);
+      expect(result.stages.parse.passed).toBe(true);
+    });
+
+    it('should recognize declared function reference in expression', async () => {
+      const schemaWithFunc = {
+        ...schema,
+        functions: {
+          calculateDiscount: {
+            returnType: 'number',
+            params: [{ name: 'price', type: 'number' }],
+          },
+        },
+      };
+      const result = await pipeline.validate('#calculateDiscount(100)', schemaWithFunc);
+      // The context check recognizes #calculateDiscount, which is in functions
+      expect(result.stages.context.passed).toBe(true);
+    });
+
+    it('should pass all four stages simultaneously', async () => {
+      const result = await pipeline.validate(
+        "#order.amount > 100 and #order.status == 'active'",
+        schema,
+      );
+      expect(result.stages.parse.passed).toBe(true);
+      expect(result.stages.type.passed).toBe(true);
+      expect(result.stages.semantic.passed).toBe(true);
+      expect(result.stages.context.passed).toBe(true);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+    });
+
+    it('should collect multiple warnings from different stages', async () => {
+      const result = await pipeline.validate(
+        "'hello' > 100 and #order.paid == #order.paid",
+        schema,
+      );
+      // Type stage: string-number comparison
+      expect(result.stages.type.warnings.some(w => w.code === 'TYPE-STR_NUM_CMP')).toBe(true);
+      // Semantic stage: self-comparison
+      expect(result.stages.semantic.warnings.some(w => w.code === 'SEM-SELF_COMPARE')).toBe(true);
+      // Total warnings should be at least 2
+      expect(result.warnings.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should handle evaluator that throws an error during parse', async () => {
+      class ThrowingEvaluator implements SpelEvaluator {
+        async parse(_expression: string): Promise<ParseResult> {
+          throw new Error('Parser engine failure');
+        }
+        getContextSchema(): ContextSchema | null {
+          return null;
+        }
+      }
+
+      const evaluator = new ThrowingEvaluator();
+      const pipeline = new ValidationPipeline(evaluator);
+      const result = await pipeline.validate('#anything', createSchema());
+
+      expect(result.stages.parse.passed).toBe(false);
+      expect(result.stages.parse.errors.length).toBeGreaterThan(0);
+      expect(result.errors.some(e => e.code === 'PARSE-EXCEPTION')).toBe(true);
+      expect(result.errors.some(e => e.message.includes('Parser engine failure'))).toBe(true);
+    });
+  });
 });

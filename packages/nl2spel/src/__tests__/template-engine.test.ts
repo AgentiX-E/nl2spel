@@ -313,6 +313,55 @@ describe('TemplateEngine', () => {
     });
   });
 
+  // ===== TE-G11.5: String entity filling =====
+  describe('TE-G11.5: String entity filling', () => {
+    it('should fill substring slot from string entities (STR-CONTAINS)', () => {
+      const engine = createEngine(ORDER_SCHEMA);
+      const intent = {
+        primaryIntent: NLIntent.STRING_MATCH,
+        intents: [{ intent: NLIntent.STRING_MATCH, confidence: 0.9 }],
+        entities: [{ text: '加急', type: 'value' as const, position: { start: 2, end: 4 } }],
+        operators: [],
+        logicalConnectors: [],
+        complexity: 20,
+      };
+      const result = engine.generate('备注包含加急', intent);
+      expect(result).not.toBeNull();
+      expect(result!.expression).toContain('加急');
+      expect(result!.unfilledSlots).toHaveLength(0);
+    });
+
+    it('should fill role slot from string entities (PERM-HAS_ROLE)', () => {
+      const engine = createEngine(ORDER_SCHEMA);
+      const intent = {
+        primaryIntent: NLIntent.PERMISSION_CHECK,
+        intents: [{ intent: NLIntent.PERMISSION_CHECK, confidence: 0.9 }],
+        entities: [{ text: 'admin', type: 'value' as const, position: { start: 0, end: 5 } }],
+        operators: [],
+        logicalConnectors: [],
+        complexity: 10,
+      };
+      const result = engine.generate('has admin role', intent);
+      expect(result).not.toBeNull();
+      expect(result!.expression).toContain("'admin'");
+    });
+
+    it('should fill typeName slot from string entities (TYPE-INSTANCEOF)', () => {
+      const engine = createEngine(ORDER_SCHEMA);
+      const intent = {
+        primaryIntent: NLIntent.TYPE_CHECK,
+        intents: [{ intent: NLIntent.TYPE_CHECK, confidence: 0.85 }],
+        entities: [{ text: 'Admin', type: 'value' as const, position: { start: 11, end: 16 } }],
+        operators: [],
+        logicalConnectors: [],
+        complexity: 15,
+      };
+      const result = engine.generate('instanceof Admin', intent);
+      expect(result).not.toBeNull();
+      expect(result!.expression).toContain('Admin');
+    });
+  });
+
   // ===== TE-G12: End-to-end =====
   describe('TE-G12: End-to-End', () => {
     it('should return null for unsupported intent with no templates', () => {

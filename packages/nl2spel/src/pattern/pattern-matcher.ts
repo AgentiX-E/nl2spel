@@ -2,22 +2,22 @@ import type { PatternDefinition, SlotDefinition } from './pattern-definition.js'
 import { ChineseNumberParser } from '../utils/chinese-number-parser.js';
 
 export interface PatternMatchResult {
-  /** 是否命中 */
+  /** Whether matched */
   matched: boolean;
-  /** 命中的 PatternDefinition */
+  /** The matching PatternDefinition */
   pattern?: PatternDefinition;
-  /** 生成的 SpEL 表达式（如果命中） */
+  /** Generated SpEL expression (if matched) */
   spel?: string;
-  /** 置信度 (0-1) */
+  /** Confidence (0-1) */
   confidence: number;
-  /** 匹配耗时 (ms) */
+  /** Match latency (ms) */
   latencyMs: number;
-  /** 提取的槽位值 */
+  /** Extracted slot values */
   slots?: Record<string, string>;
 }
 
 /**
- * PatternMatcher — Layer 0 模式匹配核心。
+ * PatternMatcher — Layer 0 pattern matching core.
  */
 export class PatternMatcher {
   private _patterns: PatternDefinition[];
@@ -46,7 +46,7 @@ export class PatternMatcher {
   }
 
   /**
-   * 匹配自然语言输入，返回最佳匹配
+   * Match natural language input, return the best match
    */
   public match(nl: string): PatternMatchResult {
     const startTime = Date.now();
@@ -76,7 +76,7 @@ export class PatternMatcher {
   }
 
   /**
-   * 批量匹配
+   * Batch match
    */
   public matchAll(nl: string, maxResults: number = 5): PatternMatchResult[] {
     const normalized = this.normalize(nl);
@@ -109,7 +109,7 @@ export class PatternMatcher {
   }
 
   /**
-   * 输入规范化
+   * Input normalization
    */
   private normalize(input: string): string {
     return input
@@ -120,7 +120,7 @@ export class PatternMatcher {
   }
 
   /**
-   * 从中文输入推断 SpEL 根对象名
+   * Infer SpEL root object name from Chinese input
    */
   private inferRoot(input: string): string {
     if (/^(?:订单|order)/i.test(input)) return 'order';
@@ -132,18 +132,18 @@ export class PatternMatcher {
   }
 
   /**
-   * 从中文输入提取中文字段名并映射到 SpEL 字段
+   * Extract Chinese field names from input and map to SpEL fields
    */
   private extractChineseField(input: string): string {
-    // 提取第一个词块作为字段标识
+    // Extract first word chunk as field identifier
     const m = input.match(/^[^\s，,、]+/);
     if (!m) return 'value';
 
     const first = m[0]!;
 
-    // 如果输入已包含SpEL字段名（如"备注为空" → "remark"），直接返回
-    // 否则保留原词用于模板填充
-    // 常见中文→英文映射
+    // If input already contains a SpEL field name, return it directly
+    // Otherwise preserve the original word for template filling
+    // Common Chinese → English mapping
     const cnMap: Record<string, string> = {
       备注: 'remark',
       说明: 'description',
@@ -181,7 +181,7 @@ export class PatternMatcher {
   }
 
   /**
-   * 模板填充与值转换
+   * Template filling and value transformation
    */
   private fillTemplate(
     pattern: PatternDefinition,
@@ -192,19 +192,25 @@ export class PatternMatcher {
     let result = pattern.spelTemplate;
     const hasFieldSlot = 'field' in slots;
 
-    // field: 优先使用捕获组中的 field，否则从输入推断
+    // field: prefer capture group 'field', otherwise infer from input
     const field = hasFieldSlot
       ? this.inferFieldFromCapture(slots['field']!)
       : this.extractChineseField(originalInput);
 
-    // root: 从输入推断
+    // root: infer from input
     const root = this.inferRoot(originalInput);
 
     result = result.replace(/\{field\}/g, field);
     result = result.replace(/\{root\}/g, root);
 
-    // 替换操作符占位符 {op}
-    if (
+    // Replace operator placeholder {op}
+    if (originalInput.includes('>=') || originalInput.includes('≥')) {
+      result = result.replace(/\{op\}/g, '>=');
+    } else if (originalInput.includes('<=') || originalInput.includes('≤')) {
+      result = result.replace(/\{op\}/g, '<=');
+    } else if (originalInput.includes('!=') || originalInput.includes('≠')) {
+      result = result.replace(/\{op\}/g, '!=');
+    } else if (
       originalInput.includes('>') ||
       originalInput.includes('大于') ||
       originalInput.includes('超过')
@@ -216,17 +222,11 @@ export class PatternMatcher {
       originalInput.includes('低于')
     ) {
       result = result.replace(/\{op\}/g, '<');
-    } else if (originalInput.includes('>=') || originalInput.includes('≥')) {
-      result = result.replace(/\{op\}/g, '>=');
-    } else if (originalInput.includes('<=') || originalInput.includes('≤')) {
-      result = result.replace(/\{op\}/g, '<=');
-    } else if (originalInput.includes('!=') || originalInput.includes('≠')) {
-      result = result.replace(/\{op\}/g, '!=');
     } else {
       result = result.replace(/\{op\}/g, '>');
     }
 
-    // 替换具体槽位
+    // Replace specific slots
     for (const [key, value] of Object.entries(slots)) {
       if (key === 'field') continue; // field already handled
       const def = pattern.slots[key];
@@ -240,19 +240,19 @@ export class PatternMatcher {
       result = result.replace(`{${key}}`, transformedValue ?? '');
     }
 
-    // 清理未填充的占位符
+    // Clean up unfilled placeholders
     result = result.replace(/\{[a-zA-Z_]+\}/g, '');
 
     return result.trim();
   }
 
   /**
-   * 从捕获组推断 SpEL 字段名
+   * Infer SpEL field name from capture group
    */
   private inferFieldFromCapture(captured: string): string {
-    // 如果已经是英文标识符，直接返回
+    // If already an English identifier, return as-is
     if (/^[a-zA-Z_]\w*$/.test(captured)) return captured;
-    // 中文，尝试映射
+    // Chinese, attempt mapping
     return this.extractChineseField(captured);
   }
 }

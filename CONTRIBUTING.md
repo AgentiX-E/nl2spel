@@ -1,37 +1,37 @@
 # Contributing to NL2SpEL
 
-## 分支策略
+## Branch Strategy
 
-- `main` — 稳定分支，所有 PR 合并目标
-- `feat/*` — 功能开发分支
-- `fix/*` — Bug 修复分支
-- `docs/*` — 文档更新分支
+- `main` — Stable branch, target for all PR merges
+- `feat/*` — Feature development branches
+- `fix/*` — Bug fix branches
+- `docs/*` — Documentation update branches
 
-## 开发环境
+## Development Environment
 
 ```bash
-# 安装依赖
+# Install dependencies
 pnpm install
 
-# 编译所有包
+# Build all packages
 pnpm build
 
-# 运行所有测试
+# Run all tests
 pnpm test
 
-# 类型检查
+# Type check
 pnpm lint
 
-# 格式化代码
+# Format code
 pnpm format
 
-# 格式检查
+# Format check
 pnpm format:check
 ```
 
-## 提交规范
+## Commit Conventions
 
-遵循 [Conventional Commits](https://www.conventionalcommits.org/)：
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 feat: add PatternMatcher with built-in patterns
@@ -42,60 +42,60 @@ chore: configure CI workflow
 refactor: extract ValidationPipeline to separate module
 ```
 
-## 代码质量要求
+## Code Quality Requirements
 
-### 测试
-- 新功能必须包含测试
-- 覆盖率不得下降（目标 ≥ 95%）
-- 所有测试必须在 CI 和本地同时通过（local=CI 零漂移）
-- 禁止使用合成数据或仅 mock 测试
+### Testing
+- New features must include tests
+- Coverage must not drop (target ≥ 95%)
+- All tests must pass on both CI and local (local=CI zero drift)
+- Synthetic data or mock-only tests are prohibited
 
-### Pre-commit 门禁
+### Pre-commit Gates
 ```bash
-# 安装 husky hooks
+# Install husky hooks
 pnpm install
 
-# 提交前自动执行：
-# - lint（类型检查 + ESLint）
-# - format:check（格式检查）
-# - test（运行测试，仅在变更文件所在包）
+# Automatically runs before commit:
+# - lint (type check + ESLint)
+# - format:check (format check)
+# - test (run tests, only in packages with changed files)
 ```
 
-### CI 要求
-- CI 端零警告、零错误
-- 单 ci.yml workflow（合并 lint/test/coverage/benchmark）
-- 覆盖率报告自动发布至 GitHub Pages
-- TypeDoc API 文档自动发布至 GitHub Pages
+### CI Requirements
+- Zero warnings, zero errors on CI
+- Single ci.yml workflow (combined lint/test/coverage/benchmark)
+- Coverage reports auto-published to GitHub Pages
+- TypeDoc API docs auto-published to GitHub Pages
 
-## 性能要求
+## Performance Requirements
 
-- 新 Pattern 延迟增量 ≤ 0.1ms
-- 新 Template 延迟增量 ≤ 1ms
-- 新 Validation check 延迟增量 ≤ 2ms
+- New pattern latency overhead ≤ 0.1ms
+- New template latency overhead ≤ 1ms
+- New validation check latency overhead ≤ 2ms
 
-## 包结构
+## Package Structure
 
-本项目使用 pnpm workspace monorepo：
+This project uses a pnpm workspace monorepo:
 
 ```
 packages/
-├── nl2spel/            # 核心引擎（零外部依赖）
+├── nl2spel/            # Core engine (zero external deps)
 ├── nl2spel-openai/     # LLM API Provider
-└── nl2spel-webllm/     # 浏览器本地 LLM Provider
+└── nl2spel-webllm/     # Browser-local LLM Provider
 ```
 
-## 发布流程
+## Release Process
 
-1. 更新 `CHANGELOG.md`
-2. 更新版本号（`packages/*/package.json`）
-3. 提交 PR 到 `main`
-4. CI 通过后合并
-5. 手动触发 `npm-publish` workflow 发布
+1. Update `CHANGELOG.md`
+2. Update version numbers (`packages/*/package.json`)
+3. Submit PR to `main`
+4. Merge after CI passes
+5. Manually trigger `npm-publish` workflow to release
 
-## 内部文档
+## Internal Documentation
 
-非面向用户的内部 agent 文档（如 `RULE_VERIFICATION.md`、`AUDIT_REPORT.md`）默认 gitignore，不得提交到仓库。
+Non-user-facing internal agent documentation (e.g., `RULE_VERIFICATION.md`, `AUDIT_REPORT.md`) is gitignored by default and must not be committed to the repository.
 
-## 许可证
+## License
 
 MIT © 2025 Agentix-E

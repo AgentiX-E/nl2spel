@@ -350,7 +350,7 @@ describe('IntentClassifier', () => {
     });
   });
 
-  // ===== IC-G14: 歧义消解 =====
+  // ===== IC-G14: Ambiguity Resolution =====
   describe('IC-G14: Ambiguity Resolution', () => {
     it('should handle empty input', () => {
       const r = classifier.classify('');
@@ -375,7 +375,7 @@ describe('IntentClassifier', () => {
     });
   });
 
-  // ===== IC-G15: 中文特化 =====
+  // ===== IC-G15: Chinese Specializations =====
   describe('IC-G15: Chinese Specializations', () => {
     it('订单金额大于1000', () => {
       const r = classifier.classify('订单金额大于1000');
@@ -400,6 +400,39 @@ describe('IntentClassifier', () => {
     it('订单号以ORD开头', () => {
       const r = classifier.classify('订单号以ORD开头');
       expect(r.primaryIntent).toBe(NLIntent.STRING_MATCH);
+    });
+  });
+
+  // ===== Input Normalization =====
+  describe('Input Normalization', () => {
+    it('should convert full-width characters to half-width', () => {
+      // Full-width ＞ (U+FF1E) → half-width >
+      const r = classifier.classify('金额＞1000');
+      expect(r.operators).toContain('>');
+      expect(r.primaryIntent).toBe(NLIntent.COMPARISON);
+    });
+
+    it('should convert full-width English letters to half-width', () => {
+      // Full-width Ｇ (U+FF27) → half-width G (U+0047)
+      const r = classifier.classify('ａｂｃ greater than ５０');
+      expect(r.primaryIntent).toBe(NLIntent.COMPARISON);
+      expect(r.entities.some(e => e.text === '50')).toBe(true);
+    });
+
+    it('should trim whitespace and normalize internal spaces', () => {
+      const r = classifier.classify('  金额  大于  1000  ');
+      expect(r.primaryIntent).toBe(NLIntent.COMPARISON);
+      expect(r.operators).toContain('>');
+      const nums = r.entities.filter(e => e.type === 'value' && !isNaN(Number(e.text)));
+      expect(nums[0]!.text).toBe('1000');
+    });
+
+    it('should lowercase input for case-insensitive matching', () => {
+      // 'Greater' → 'greater' after toLowerCase; COMPARISON intent detected via en keywords
+      const r = classifier.classify('AMOUNT GREATER Than 500');
+      expect(r.primaryIntent).toBe(NLIntent.COMPARISON);
+      // English word "greater" maps to COMPARISON intent but not to the '>' operator
+      expect(r.intents.some(i => i.intent === NLIntent.COMPARISON)).toBe(true);
     });
   });
 

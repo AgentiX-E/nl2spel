@@ -1,26 +1,26 @@
 /**
- * PROVIDER_PRESETS — 7 个预定义 LLM Provider 配置。
+ * PROVIDER_PRESETS — 7 predefined LLM provider configurations.
  *
- * 每个 Preset 包含完整的 API 端点和模型名称。
+ * Each preset includes the full API endpoint and model name.
  */
 export interface ProviderPreset {
-  /** Provider 名称 */
+  /** Provider name */
   name: string;
-  /** API 基础 URL */
+  /** API base URL */
   baseURL: string;
-  /** 默认模型 */
+  /** Default model */
   defaultModel: string;
-  /** 最大上下文 tokens */
+  /** Maximum context tokens */
   maxContextTokens: number;
-  /** 是否支持流式输出 */
+  /** Whether streaming output is supported */
   supportsStreaming: boolean;
-  /** 估算单次请求成本（美元） */
+  /** Estimated cost per request (USD) */
   estimatedCostPerRequest: number;
-  /** 估算延迟 (ms) */
+  /** Estimated latency (ms) */
   estimatedLatencyMs: number;
-  /** 默认请求头 */
+  /** Default request headers */
   headers?: Record<string, string>;
-  /** 是否支持结构化输出 */
+  /** Whether structured output is supported */
   supportsStructuredOutput: boolean;
 }
 

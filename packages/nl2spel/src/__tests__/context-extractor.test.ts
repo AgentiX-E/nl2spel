@@ -196,6 +196,55 @@ describe('ContextExtractor', () => {
     });
   });
 
+  describe('extractFields catch block', () => {
+    it('should skip inaccessible properties without crashing', () => {
+      const obj: Record<string, unknown> = { normal: 42 };
+      let getterCalled = false;
+      Object.defineProperty(obj, 'bad', {
+        get() {
+          getterCalled = true;
+          throw new Error('Access denied');
+        },
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(obj, 'good', {
+        value: 'hello',
+        enumerable: true,
+      });
+
+      const schema = extractor.extract({ rootObject: obj });
+      expect(getterCalled).toBe(true);
+      expect(schema.root!.fields.normal!.type).toBe('number');
+      expect(schema.root!.fields.good!.type).toBe('string');
+      // 'bad' should be skipped entirely
+      expect(schema.root!.fields.bad).toBeUndefined();
+    });
+  });
+
+  describe('safeExample for objects', () => {
+    it('should return undefined for object-type field values', () => {
+      const schema = extractor.extract({
+        rootObject: { nested: { x: 1 }, label: 'hello' },
+      });
+
+      expect(schema.root!.fields.nested!.type).toBe('object');
+      expect(schema.root!.fields.nested!.example).toBeUndefined();
+      expect(schema.root!.fields.label!.type).toBe('string');
+      expect(schema.root!.fields.label!.example).toBe('hello');
+    });
+  });
+
+  describe('extractVariables nullable default', () => {
+    it('should default nullable to false when not specified', () => {
+      const schema = extractor.extract({
+        variables: { x: { type: 'number', value: 10 } },
+      });
+
+      expect(schema.variables.x!.nullable).toBe(false);
+    });
+  });
+
   describe('complete schema extraction', () => {
     it('should extract full schema with all components', () => {
       const schema = extractor.extract({
@@ -223,6 +272,137 @@ describe('ContextExtractor', () => {
       expect(schema.beans).toHaveProperty('discountService');
       expect(schema.types).toHaveProperty('OrderStatus');
       expect(schema.functions).toHaveProperty('sum');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should set elementType to undefined for arrays with 0 elements', () => {
+      const schema = extractor.extract({
+        rootObject: { items: [] },
+      });
+
+      expect(schema.root!.fields.items!.isCollection).toBe(true);
+      expect(schema.root!.fields.items!.type).toBe('array');
+      expect(schema.root!.fields.items!.elementType).toBeUndefined();
+    });
+
+    it('should detect Date field type as "date"', () => {
+      const schema = extractor.extract({
+        rootObject: { createdAt: new Date('2025-06-01'), label: 'invoice' },
+      });
+
+      expect(schema.root!.fields.createdAt!.type).toBe('date');
+      expect(schema.root!.fields.label!.type).toBe('string');
+    });
+
+    it('should extract null-valued root properties (they are in Object.keys)', () => {
+      const schema = extractor.extract({
+        rootObject: { a: null, b: 'hello' },
+      });
+
+      expect(schema.root!.fields.a).toBeDefined();
+      expect(schema.root!.fields.a!.nullable).toBe(true);
+      expect(schema.root!.fields.a!.type).toBe('string');
+      expect(schema.root!.fields.a!.example).toBeNull();
+      expect(schema.root!.fields.b!.nullable).toBe(false);
+    });
+
+    it('should extract full context with root, variables, beans, types, and functions', () => {
+      const schema = extractor.extract({
+        rootObject: { id: 100, name: 'demo' },
+        rootName: 'entity',
+        variables: {
+          counter: { type: 'number', description: 'Loop counter', value: 0 },
+          status: { type: 'string', nullable: true },
+        },
+        beans: [
+          { name: 'svc', type: 'MyService', description: 'Core service' },
+          { name: 'transient', type: 'Worker', singleton: false },
+        ],
+        types: [
+          { name: 'StatusEnum', className: 'com.example.StatusEnum' },
+          { name: 'MarkerInterface', description: 'Just a marker' },
+        ],
+        functions: [
+          {
+            name: 'max',
+            returnType: 'number',
+            params: [
+              { name: 'a', type: 'number' },
+              { name: 'b', type: 'number' },
+            ],
+            description: 'Returns larger value',
+          },
+        ],
+      });
+
+      // Root
+      expect(schema.root).not.toBeNull();
+      expect(schema.root!.name).toBe('entity');
+      expect(schema.root!.fields.id!.type).toBe('number');
+      expect(schema.root!.fields.name!.type).toBe('string');
+
+      // Variables
+      expect(schema.variables.counter!.type).toBe('number');
+      expect(schema.variables.counter!.value).toBe(0);
+      expect(schema.variables.status!.nullable).toBe(true);
+
+      // Beans
+      expect(schema.beans.svc!.type).toBe('MyService');
+      expect(schema.beans.svc!.description).toBe('Core service');
+      expect(schema.beans.transient!.singleton).toBe(false);
+
+      // Types
+      expect(schema.types.StatusEnum!.className).toBe('com.example.StatusEnum');
+      expect(schema.types.MarkerInterface!.className).toBeUndefined();
+      expect(schema.types.MarkerInterface!.description).toBe('Just a marker');
+
+      // Functions
+      expect(schema.functions.max!.returnType).toBe('number');
+      expect(schema.functions.max!.params).toHaveLength(2);
+      expect(schema.functions.max!.params[0]!.name).toBe('a');
+    });
+
+    it('should extract variable with nullable=true', () => {
+      const schema = extractor.extract({
+        variables: { opt: { type: 'string', nullable: true } },
+      });
+
+      expect(schema.variables.opt!.nullable).toBe(true);
+    });
+
+    it('should extract bean with singleton=true', () => {
+      const schema = extractor.extract({
+        beans: [{ name: 'singleton', type: 'Cache', singleton: true }],
+      });
+
+      expect(schema.beans.singleton!.singleton).toBe(true);
+    });
+
+    it('should extract bean with singleton=false', () => {
+      const schema = extractor.extract({
+        beans: [{ name: 'prototype', type: 'Worker', singleton: false }],
+      });
+
+      expect(schema.beans.prototype!.singleton).toBe(false);
+    });
+
+    it('should extract type with className', () => {
+      const schema = extractor.extract({
+        types: [{ name: 'WithClass', className: 'com.example.MyClass' }],
+      });
+
+      expect(schema.types.WithClass!.className).toBe('com.example.MyClass');
+    });
+
+    it('should extract type without className', () => {
+      const schema = extractor.extract({
+        types: [{ name: 'NoClass', description: 'Interface without class binding' }],
+      });
+
+      expect(schema.types.NoClass).toBeDefined();
+      expect(schema.types.NoClass!.className).toBeUndefined();
+      expect(schema.types.NoClass!.description).toBe('Interface without class binding');
     });
   });
 });

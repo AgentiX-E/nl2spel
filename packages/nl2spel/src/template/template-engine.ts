@@ -3,19 +3,19 @@ import type { IntentResult } from './intent-classifier.js';
 import type { ContextSchema } from '../SpelEvaluator.js';
 
 export interface TemplateResult {
-  /** 生成的 SpEL 表达式 */
+  /** Generated SpEL expression */
   expression: string;
 
-  /** 使用的意图 */
+  /** Intent used */
   intent: NLIntent;
 
-  /** 使用的模板名称 */
+  /** Template name used */
   templateName: string;
 
-  /** 置信度 */
+  /** Confidence */
   confidence: number;
 
-  /** 需要进一步 LLM 处理的未填充槽位 */
+  /** Unfilled slots needing further LLM processing */
   unfilledSlots: string[];
 }
 
@@ -28,13 +28,13 @@ interface TemplateEntry {
     hasCollection?: boolean;
     hasLogical?: boolean;
     hasString?: boolean;
-    entityCount?: { min?: number; max?: number };
+    entityCount?: { min?: number };
   };
   confidence: number;
 }
 
 /**
- * SpEL 模板库 —— 每个 Intent 对应一组模板。
+ * SpEL template library — each Intent maps to a set of templates.
  */
 const TEMPLATE_LIBRARY: Record<NLIntent, TemplateEntry[]> = {
   [NLIntent.COMPARISON]: [
@@ -276,7 +276,7 @@ export class TemplateEngine {
   }
 
   /**
-   * 根据意图分类结果生成 SpEL 表达式
+   * Generate a SpEL expression based on intent classification results
    */
   public generate(input: string, intentResult: IntentResult): TemplateResult | null {
     const templates = TEMPLATE_LIBRARY[intentResult.primaryIntent];
@@ -333,12 +333,6 @@ export class TemplateEngine {
         ) {
           continue;
         }
-        if (
-          conditions.entityCount.max &&
-          intentResult.entities.length > conditions.entityCount.max
-        ) {
-          score -= 1;
-        }
       }
 
       if (score > bestScore) {
@@ -358,7 +352,7 @@ export class TemplateEngine {
     let expression = template;
     const unfilledSlots: string[] = [];
 
-    // 从 contextSchema 提取 root 名称
+    // Extract root name from contextSchema
     let rootName = 'order';
     let fieldName = 'field';
 
@@ -372,7 +366,7 @@ export class TemplateEngine {
         }
       }
     } else {
-      // 启发式 root name 提取
+      // Heuristic root name extraction
       const rootMap: Record<string, string> = {
         订单: 'order',
         order: 'order',
@@ -393,15 +387,19 @@ export class TemplateEngine {
       }
     }
 
-    // 填充 root
+    // Fill root
     expression = expression.replace(/\{root\}/g, rootName);
     expression = expression.replace(/\{field\}/g, fieldName);
-    expression = expression.replace(/\{field1\}/g, 'field1');
-    expression = expression.replace(/\{field2\}/g, 'field2');
+    // Extract field entities for dual-field templates
+    const fieldEntities = intentResult.entities.filter(e => e.type === 'field');
+    const field1Name = fieldEntities[0]?.text ?? fieldName;
+    const field2Name = fieldEntities[1]?.text ?? fieldName;
+    expression = expression.replace(/\{field1\}/g, field1Name);
+    expression = expression.replace(/\{field2\}/g, field2Name);
     expression = expression.replace(/\{conditionField\}/g, 'condition');
     expression = expression.replace(/\{list\}/g, 'items');
 
-    // 提取数值实体
+    // Extract numeric entities
     const numberEntities = intentResult.entities.filter(
       e => e.type === 'value' && !isNaN(Number(e.text)),
     );
@@ -409,7 +407,7 @@ export class TemplateEngine {
       e => e.type === 'value' && isNaN(Number(e.text)),
     );
 
-    // 填充数值
+    // Fill numeric values
     if (numberEntities.length > 0) {
       expression = expression.replace(/\{value\}/, numberEntities[0]!.text);
       expression = expression.replace(/\{value1\}/, numberEntities[0]!.text);
@@ -419,7 +417,7 @@ export class TemplateEngine {
       expression = expression.replace(/\{conditionValue\}/, numberEntities[0]!.text);
     }
 
-    // 填充字符串
+    // Fill string values
     if (stringEntities.length > 0) {
       expression = expression.replace(/\{substring\}/, stringEntities[0]!.text);
       expression = expression.replace(/\{element\}/, stringEntities[0]!.text);
@@ -433,7 +431,7 @@ export class TemplateEngine {
       expression = expression.replace(/\{typeName\}/, stringEntities[0]!.text);
     }
 
-    // 运算符填充
+    // Operator filling
     if (intentResult.operators.length > 0) {
       expression = expression.replace(/\{operator\}/g, intentResult.operators[0]!);
       expression = expression.replace(/\{operator1\}/g, intentResult.operators[0]!);
@@ -444,14 +442,14 @@ export class TemplateEngine {
       expression = expression.replace(/\{conditionOp\}/g, intentResult.operators[0]!);
     }
 
-    // 逻辑连接词
+    // Logical connectors
     if (intentResult.logicalConnectors.length > 0) {
       expression = expression.replace(/\{logic\}/g, intentResult.logicalConnectors[0]!);
     } else {
       expression = expression.replace(/\{logic\}/g, 'and');
     }
 
-    // 检测未填充槽位
+    // Detect unfilled slots
     const unfilledMatches = expression.matchAll(/\{(\w+)\}/g);
     for (const m of unfilledMatches) {
       const slot = m[1]!;

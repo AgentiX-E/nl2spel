@@ -185,7 +185,7 @@ describe('NL2SpelEngine', () => {
           root: {
             name: 'invoice',
             type: 'Invoice',
-            fields: { total: { type: 'number' } },
+            fields: { total: { type: 'number' as const } },
             methods: {},
           },
           variables: {},
@@ -203,6 +203,191 @@ describe('NL2SpelEngine', () => {
         context: { rootObject: { amount: 500 }, rootName: 'payment' },
       });
       expect(result.expression).toContain('>');
+    });
+
+    it('should accept contextSchema directly without context object', async () => {
+      const engine = new NL2SpelEngine();
+      const schema = {
+        root: {
+          name: 'product',
+          type: 'Product',
+          fields: { price: { type: 'number' as const }, status: { type: 'string' as const } },
+          methods: {},
+        },
+        variables: {},
+        beans: {},
+        types: {},
+        functions: {},
+      };
+      const result = await engine.generate('价格大于100', { contextSchema: schema });
+      expect(result.expression).toContain('>');
+      expect(result.strategy).toBeTruthy();
+    });
+
+    it('should accept both contextSchema and context object without error', async () => {
+      const engine = new NL2SpelEngine();
+      const schema = {
+        root: {
+          name: 'invoice',
+          type: 'Invoice',
+          fields: { total: { type: 'number' as const } },
+          methods: {},
+        },
+        variables: {},
+        beans: {},
+        types: {},
+        functions: {},
+      };
+      const contextObj = { rootObject: { amount: 500 }, rootName: 'payment' };
+      const result = await engine.generate('金额大于100', {
+        contextSchema: schema,
+        context: contextObj,
+      });
+      expect(result.expression).toContain('>');
+      expect(result.strategy).toBeTruthy();
+    });
+  });
+
+  // ===== Provider management =====
+  describe('Provider management', () => {
+    it('should register and unregister a provider', () => {
+      const engine = new NL2SpelEngine();
+      const provider = createMockLLMProvider('test-provider');
+
+      engine.registerProvider(provider);
+      expect((engine as any)['providerRegistry'].count).toBe(1);
+      expect((engine as any)['providerRegistry'].list()).toHaveLength(1);
+
+      engine.unregisterProvider('test-provider');
+      expect((engine as any)['providerRegistry'].count).toBe(0);
+      expect((engine as any)['providerRegistry'].list()).toHaveLength(0);
+    });
+
+    it('should track count of multiple registered providers', () => {
+      const engine = new NL2SpelEngine();
+      engine.registerProvider(createMockLLMProvider('provider-a'));
+      engine.registerProvider(createMockLLMProvider('provider-b'));
+      engine.registerProvider(createMockLLMProvider('provider-c'));
+
+      expect((engine as any)['providerRegistry'].count).toBe(3);
+      expect((engine as any)['providerRegistry'].list()).toHaveLength(3);
+    });
+  });
+
+  // ===== setSpelEvaluator =====
+  describe('setSpelEvaluator', () => {
+    it('should accept a SpelEvaluator without crashing', () => {
+      const engine = new NL2SpelEngine();
+      const mockEvaluator = {
+        parse: vi.fn().mockReturnValue({ valid: true, errors: [] }),
+        getContextSchema: vi.fn().mockReturnValue(null),
+      };
+
+      expect(() => engine.setSpelEvaluator(mockEvaluator)).not.toThrow();
+    });
+  });
+
+  // ===== explain() with patternMatched =====
+  describe('explain', () => {
+    it('should set patternMatched=true for input that matches a pattern', async () => {
+      const engine = new NL2SpelEngine();
+      const explanation = await engine.explain('订单金额大于1000');
+
+      expect(explanation.patternMatched).toBe(true);
+      expect(explanation.patternId).toBeDefined();
+      expect(typeof explanation.patternId).toBe('string');
+      expect(explanation.patternId!.length).toBeGreaterThan(0);
+    });
+
+    it('should return alternatives containing valid SpEL expressions', async () => {
+      const engine = new NL2SpelEngine();
+      const explanation = await engine.explain('订单金额大于1000');
+
+      expect(explanation.alternatives.length).toBeGreaterThan(0);
+      for (const alt of explanation.alternatives) {
+        expect(typeof alt).toBe('string');
+        expect(alt.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  // ===== generate() options =====
+  describe('generate options', () => {
+    it('should accept preferredProvider option without error', async () => {
+      const engine = new NL2SpelEngine();
+      engine.registerProvider(createMockLLMProvider('openai', '#order.amount > 500'));
+
+      // preferredProvider is passed through to the router; even if the
+      // provider isn't used (pattern matches first), it shouldn't crash.
+      const result = await engine.generate('一个复杂条件判断', {
+        preferredProvider: 'openai',
+      });
+      expect(result.expression).toBeTruthy();
+      expect(result.strategy).toBeTruthy();
+    });
+
+    it('should accept debug option without error', async () => {
+      const engine = new NL2SpelEngine();
+      const result = await engine.generate('订单金额大于1000', {
+        debug: true,
+      });
+      expect(result.expression).toBeTruthy();
+      expect(result.strategy).toBeTruthy();
+    });
+  });
+
+  // ===== generateBatch error handling =====
+  describe('generateBatch error handling', () => {
+    it('should reject entire batch when any single generate fails (Promise.all semantics)', async () => {
+      const engine = new NL2SpelEngine();
+
+      // All valid inputs — batch succeeds
+      const batch1 = await engine.generateBatch(['订单金额大于1000', '用户是VIP'], {
+        offlineOnly: true,
+      });
+      expect(batch1).toHaveLength(2);
+      expect(batch1[0]!.expression).toBeTruthy();
+      expect(batch1[1]!.expression).toBeTruthy();
+
+      // One invalid input (empty string cannot be matched by pattern or template)
+      // causes generate() to throw, and Promise.all rejects the entire batch.
+      await expect(
+        engine.generateBatch(['订单金额大于1000', ''], { offlineOnly: true }),
+      ).rejects.toThrow('Cannot generate expression offline');
+    });
+  });
+
+  // ===== extractContextSchema =====
+  describe('extractContextSchema', () => {
+    it('should extract context schema from a raw context object', () => {
+      const engine = new NL2SpelEngine();
+      const schema = engine.extractContextSchema({
+        rootObject: { amount: 500, status: 'shipped' },
+        rootName: 'order',
+      });
+
+      expect(schema.root).not.toBeNull();
+      expect(schema.root!.name).toBe('order');
+      expect(schema.root!.fields.amount).toBeDefined();
+      expect(schema.root!.fields.status).toBeDefined();
+    });
+  });
+
+  // ===== Constructor with custom StrategyRouterConfig =====
+  describe('Constructor with custom config', () => {
+    it('should accept custom StrategyRouterConfig', async () => {
+      const engine = new NL2SpelEngine({
+        patternMinConfidence: 0.9,
+        templateMinConfidence: 0.8,
+        llmMinConfidence: 0.7,
+        enableSelfCorrection: false,
+        maxCorrectionAttempts: 1,
+      });
+
+      // Engine should still function with custom thresholds
+      const result = await engine.generate('订单金额大于1000');
+      expect(result.expression).toContain('>');
+      expect(result.strategy).toBe('pattern');
     });
   });
 });

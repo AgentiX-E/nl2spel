@@ -1,5 +1,5 @@
 /**
- * AutoFixer —— 自动修复 LLM 生成的常见 SpEL 语法错误。
+ * AutoFixer — automatically fixes common SpEL syntax errors from LLM output.
  */
 export class AutoFixer {
   public fix(expression: string): AutoFixResult {

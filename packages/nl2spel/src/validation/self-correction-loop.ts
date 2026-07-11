@@ -4,22 +4,22 @@ import { AutoFixer } from './auto-fixer.js';
 import type { ContextSchema } from '../SpelEvaluator.js';
 
 export interface SelfCorrectionResult {
-  /** 最终表达式 */
+  /** Final expression */
   expression: string;
 
-  /** 是否验证通过 */
+  /** Whether validation passed */
   valid: boolean;
 
-  /** 原始 LLM 输出 */
+  /** Original LLM output */
   originalOutput: string;
 
-  /** 修正次数 */
+  /** Number of correction attempts */
   correctionAttempts: number;
 
-  /** 每轮修正的日志 */
+  /** Log of each correction round */
   corrections: CorrectionLog[];
 
-  /** 总耗时 (ms) */
+  /** Total latency (ms) */
   totalLatencyMs: number;
 }
 
@@ -34,11 +34,11 @@ export interface CorrectionLog {
 }
 
 export interface SelfCorrectionConfig {
-  /** 最大修正次数 (默认 3) */
+  /** Maximum correction attempts (default 3) */
   maxAttempts?: number;
-  /** 最小置信度阈值 (默认 0.7) */
+  /** Minimum confidence threshold (default 0.7) */
   minConfidence?: number;
-  /** 是否启用 AutoFix (默认 true) */
+  /** Whether AutoFix is enabled (default true) */
   enableAutoFix?: boolean;
 }
 
@@ -62,7 +62,7 @@ export class SelfCorrectionLoop {
   }
 
   /**
-   * 执行自纠正循环
+   * Execute the self-correction loop
    */
   public async correct(
     expression: string,
@@ -75,7 +75,7 @@ export class SelfCorrectionLoop {
     let currentExpression = expression;
     let valid = false;
 
-    // Attempt 0: 直接验证原始输出
+    // Attempt 0: directly validate original output
     const initialResult = await this.pipeline.validate(currentExpression, contextSchema);
 
     if (initialResult.valid) {
@@ -89,7 +89,7 @@ export class SelfCorrectionLoop {
       };
     }
 
-    // Attempt 0.5: 尝试 AutoFix
+    // Attempt 0.5: try AutoFix
     if (this.config.enableAutoFix && initialResult.errors.length > 0) {
       const autoFixResult = this.autoFixer.fix(currentExpression);
       if (autoFixResult.wasFixed) {
@@ -105,7 +105,7 @@ export class SelfCorrectionLoop {
           autoFixChanges: autoFixResult.changes,
         });
 
-        // 验证 AutoFix 结果
+        // Validate AutoFix result
         const afterFix = await this.pipeline.validate(currentExpression, contextSchema);
 
         if (afterFix.valid) {
@@ -119,7 +119,7 @@ export class SelfCorrectionLoop {
           };
         }
 
-        // AutoFix 不够，继续 LLM 纠正
+        // AutoFix not sufficient, continue to LLM correction
         corrections.push({
           attempt: 0,
           expression: currentExpression,
@@ -132,16 +132,11 @@ export class SelfCorrectionLoop {
       }
     }
 
-    // Attempts 1..N: LLM 重新生成
+    // Attempts 1..N: LLM regeneration
     for (let attempt = 1; attempt <= this.config.maxAttempts!; attempt++) {
       const lastValidation = await this.pipeline.validate(currentExpression, contextSchema);
 
-      if (lastValidation.valid) {
-        valid = true;
-        break;
-      }
-
-      // 构造纠正 Prompt
+      // Build correction prompt
       const errorDescriptions = lastValidation.errors
         .map(e => `- [${e.code}] ${e.message}`)
         .join('\n');
@@ -164,7 +159,7 @@ export class SelfCorrectionLoop {
         const response = await generateFn(correctionPrompt);
         currentExpression = response.text.trim();
 
-        // 再次 AutoFix
+        // Apply AutoFix again
         if (this.config.enableAutoFix) {
           const afResult = this.autoFixer.fix(currentExpression);
           if (afResult.wasFixed) {

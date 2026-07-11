@@ -188,6 +188,56 @@ describe('ProviderRegistry', () => {
       const prioritized = await registry.getPrioritized();
       expect(prioritized).toHaveLength(0);
     });
+
+    // Coverage: neither provider offline → skip line 46, exercise cost tie-breaker
+    it('should sort by cost when neither provider is offline (line 46 skip)', async () => {
+      const registry = new ProviderRegistry();
+      const expensive = createMockProvider('openai', {
+        estimatedCostPerRequest: 0.01,
+        offlineAvailable: false,
+      });
+      const cheap = createMockProvider('gleam', {
+        estimatedCostPerRequest: 0.001,
+        offlineAvailable: false,
+      });
+
+      registry.register(expensive);
+      registry.register(cheap);
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized[0]!.name).toBe('gleam');
+      expect(prioritized[1]!.name).toBe('openai');
+    });
+
+    // Coverage: three providers same cost different latency (lines 49-50 = costs equal)
+    it('should sort by latency when three providers have same cost (covers line 49-50)', async () => {
+      const registry = new ProviderRegistry();
+      const slow = createMockProvider('openai', {
+        estimatedCostPerRequest: 0.001,
+        estimatedLatencyMs: 3000,
+        offlineAvailable: false,
+      });
+      const medium = createMockProvider('deepseek', {
+        estimatedCostPerRequest: 0.001,
+        estimatedLatencyMs: 2000,
+        offlineAvailable: false,
+      });
+      const fast = createMockProvider('glm', {
+        estimatedCostPerRequest: 0.001,
+        estimatedLatencyMs: 1000,
+        offlineAvailable: false,
+      });
+
+      registry.register(slow);
+      registry.register(medium);
+      registry.register(fast);
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized).toHaveLength(3);
+      expect(prioritized[0]!.name).toBe('glm');
+      expect(prioritized[1]!.name).toBe('deepseek');
+      expect(prioritized[2]!.name).toBe('openai');
+    });
   });
 
   // ===== list =====

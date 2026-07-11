@@ -161,6 +161,140 @@ describe('SchemaFormatter', () => {
     });
   });
 
+  // Coverage: beans/types without description (lines 45, 55 false branches)
+  describe('beans/types without description', () => {
+    it('should format bean without description (line 45 false branch)', () => {
+      const schema: ContextSchema = {
+        root: null,
+        variables: {},
+        beans: { myService: { type: 'MyService' } },
+        types: {},
+        functions: {},
+      };
+      const output = formatter.formatForLLM(schema);
+      expect(output).toContain('@myService: MyService');
+    });
+
+    it('should format type without description (line 55 false branch)', () => {
+      const schema: ContextSchema = {
+        root: null,
+        variables: {},
+        beans: {},
+        types: { MyEnum: {} },
+        functions: {},
+      };
+      const output = formatter.formatForLLM(schema);
+      expect(output).toContain('MyEnum');
+    });
+  });
+
+  // Coverage: isCollection field missing elementType (lines 96, 113 'unknown' fallback)
+  describe('collection field without elementType', () => {
+    it('should use "unknown" when elementType is missing in formatForHuman (line 96)', () => {
+      const schema: ContextSchema = {
+        root: {
+          name: 'order',
+          type: 'Order',
+          fields: {
+            tags: {
+              type: 'array',
+              isCollection: true,
+              description: 'Tag list',
+            },
+          },
+          methods: {},
+        },
+        variables: {},
+        beans: {},
+        types: {},
+        functions: {},
+      };
+      const output = formatter.formatForHuman(schema);
+      expect(output).toContain('collection<unknown>');
+    });
+
+    it('should use "unknown" when elementType is missing in formatForLLM (line 113)', () => {
+      const schema: ContextSchema = {
+        root: {
+          name: 'order',
+          type: 'Order',
+          fields: {
+            tags: {
+              type: 'array',
+              isCollection: true,
+              description: 'Tag list',
+            },
+          },
+          methods: {},
+        },
+        variables: {},
+        beans: {},
+        types: {},
+        functions: {},
+      };
+      const output = formatter.formatForLLM(schema);
+      expect(output).toContain('[array of unknown]');
+    });
+  });
+
+  // Coverage: formatForHuman for-loop prefix branching (├─ vs └─)
+  describe('formatForHuman prefix branching', () => {
+    it('should use └─ for last field (single field exercises └─ prefix path)', () => {
+      const schema: ContextSchema = {
+        root: {
+          name: 'item',
+          type: 'Item',
+          fields: {
+            id: {
+              type: 'number',
+              description: 'Item ID',
+            },
+          },
+          methods: {},
+        },
+        variables: {},
+        beans: {},
+        types: {},
+        functions: {},
+      };
+      const output = formatter.formatForHuman(schema);
+      expect(output).toContain('└─ id');
+      expect(output).toContain('1 fields total');
+    });
+
+    it('should use ├─ for non-last and └─ for last with many fields', () => {
+      const schema = createBasicSchema();
+      const output = formatter.formatForHuman(schema);
+      expect(output).toContain('├─ amount');
+      expect(output).toContain('├─ status');
+      expect(output).toContain('├─ paid');
+      expect(output).toContain('└─ items');
+      expect(output).toContain('4 fields total');
+    });
+  });
+
+  // Coverage: functions with description
+  describe('functions with description', () => {
+    it('should format function that has a description property', () => {
+      const schema: ContextSchema = {
+        root: null,
+        variables: {},
+        beans: {},
+        types: {},
+        functions: {
+          calculateDiscount: {
+            returnType: 'number',
+            description: 'Calculate discount for order',
+            params: [{ name: 'order', type: 'Order' }],
+          },
+        },
+      };
+      const output = formatter.formatForLLM(schema);
+      expect(output).toContain('#calculateDiscount(order: Order)');
+      expect(output).toContain('number');
+    });
+  });
+
   describe('empty schema', () => {
     it('should handle null root gracefully', () => {
       const schema: ContextSchema = {

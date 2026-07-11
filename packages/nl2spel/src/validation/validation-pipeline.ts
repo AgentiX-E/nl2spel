@@ -1,14 +1,14 @@
 import type { ContextSchema, SpelEvaluator } from '../SpelEvaluator.js';
 
 // ============================================================
-// Validation 类型
+// Validation types
 // ============================================================
 
 export interface ValidationResult {
-  /** 是否通过所有验证阶段 */
+  /** Whether all validation stages passed */
   valid: boolean;
 
-  /** 各阶段结果 */
+  /** Stage results */
   stages: {
     parse: StageResult;
     type: StageResult;
@@ -16,10 +16,10 @@ export interface ValidationResult {
     context: StageResult;
   };
 
-  /** 所有错误 */
+  /** All errors */
   errors: ValidationError[];
 
-  /** 所有警告 */
+  /** All warnings */
   warnings: ValidationWarning[];
 }
 
@@ -32,20 +32,20 @@ export interface StageResult {
 export interface ValidationError {
   code: string;
   message: string;
-  /** 错误在表达式中的位置 */
+  /** Error position in expression */
   position?: number;
-  /** 错误所属阶段 */
+  /** Stage the error belongs to */
   stage: 'parse' | 'type' | 'semantic' | 'context';
-  /** 是否需要 LLM 重新生成 */
+  /** Whether LLM regeneration is needed */
   requiresLLM?: boolean;
 }
 
 export interface ValidationWarning {
   code: string;
   message: string;
-  /** 警告在表达式中的位置 */
+  /** Warning position in expression */
   position?: number;
-  /** 警告所属阶段 */
+  /** Stage the warning belongs to */
   stage: 'parse' | 'type' | 'semantic' | 'context';
 }
 
@@ -54,12 +54,12 @@ export interface ValidationWarning {
 // ============================================================
 
 /**
- * ValidationPipeline — 四阶段验证管道。
+ * ValidationPipeline — four-stage validation pipeline.
  *
- * 1. Parse: 语法合法性（依赖 SpelEvaluator）
- * 2. Type: 类型检查（操作符与操作数类型匹配）
- * 3. Semantic: 语义合理性（表达式是否有意义）
- * 4. Context: 上下文引用（所有引用是否存在于 ContextSchema）
+ * 1. Parse: syntax validity (depends on SpelEvaluator)
+ * 2. Type: type checking (operator-operand type matching)
+ * 3. Semantic: semantic reasonableness (is the expression meaningful)
+ * 4. Context: context references (do all references exist in ContextSchema)
  */
 export class ValidationPipeline {
   private evaluator: SpelEvaluator | null;
@@ -73,7 +73,7 @@ export class ValidationPipeline {
   }
 
   /**
-   * 运行完整验证管道
+   * Run the full validation pipeline
    */
   public async validate(
     expression: string,
@@ -121,13 +121,13 @@ export class ValidationPipeline {
   }
 
   /**
-   * Stage 1: Parse Check — 语法验证
+   * Stage 1: Parse Check — syntax validation
    */
   private async validateParse(expression: string): Promise<StageResult> {
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
 
-    // 基本空表达式检查
+    // Basic empty expression check
     if (!expression || expression.trim().length === 0) {
       errors.push({
         code: 'PARSE-EMPTY',
@@ -138,7 +138,7 @@ export class ValidationPipeline {
       return { passed: false, errors, warnings };
     }
 
-    // 括号匹配检查
+    // Parentheses balance check
     if (!this.hasBalancedParentheses(expression)) {
       errors.push({
         code: 'PARSE-UNBALANCED_PARENS',
@@ -148,7 +148,7 @@ export class ValidationPipeline {
       });
     }
 
-    // 非法字符检查
+    // Illegal character check
     if (expression.includes('===') || expression.includes('!==')) {
       errors.push({
         code: 'PARSE-JS_OPERATOR',
@@ -158,7 +158,7 @@ export class ValidationPipeline {
       });
     }
 
-    // 检查 JS 风格逻辑运算符
+    // Check for JS-style logical operators
     if (expression.includes('&&')) {
       errors.push({
         code: 'PARSE-JS_LOGIC',
@@ -177,7 +177,7 @@ export class ValidationPipeline {
       });
     }
 
-    // 如果配置了 evaluator，进行实际语法解析
+    // If an evaluator is configured, perform actual syntax parsing
     if (this.evaluator) {
       try {
         const parseResult = await this.evaluator.parse(expression);
@@ -210,16 +210,16 @@ export class ValidationPipeline {
   }
 
   /**
-   * Stage 2: Type Check — 类型验证
+   * Stage 2: Type Check — type validation
    */
   private validateTypes(expression: string, contextSchema?: ContextSchema): StageResult {
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
 
-    // 字符串与数值比较检查（可能需要严格的上下文Schema支持）
-    // 这里做基础启发式检查
+    // Check string vs number comparison (may require full ContextSchema support)
+    // Here we do basic heuristic checks
 
-    // 检查是否有字符串字面量与数值运算符一起使用
+    // Check if string literals are used with numeric operators
     const strNumMismatch = /'(?:\\.|[^'\\])*'\s*(?:>|<|>=|<=)\s*\d+/;
     if (strNumMismatch.test(expression)) {
       warnings.push({
@@ -229,11 +229,11 @@ export class ValidationPipeline {
       });
     }
 
-    // 如果提供了 ContextSchema，可以做更深入的检查
+    // If ContextSchema is provided, do deeper checks
     if (contextSchema?.root) {
       for (const [fieldName, field] of Object.entries(contextSchema.root.fields)) {
         if (field.type === 'boolean') {
-          // 检查 bool 字段是否与数值比较
+          // Check boolean field compared with number
           const boolNumPattern = new RegExp(`#\\w+\\.${fieldName}\\s*(?:>|<|>=|<=)\\s*\\d+`);
           if (boolNumPattern.test(expression)) {
             warnings.push({
@@ -254,13 +254,13 @@ export class ValidationPipeline {
   }
 
   /**
-   * Stage 3: Semantic Check — 语义合理性验证
+   * Stage 3: Semantic Check — semantic reasonableness validation
    */
   private validateSemantic(expression: string): StageResult {
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
 
-    // 检查是否有类似于 `x == x` 的恒真/恒假表达式
+    // Check for tautology/contradiction like `x == x`
     const selfCompare = /(#\w+(?:\.\w+)*)\s*==\s*\1/;
     if (selfCompare.test(expression)) {
       warnings.push({
@@ -270,7 +270,7 @@ export class ValidationPipeline {
       });
     }
 
-    // 检查是否有双重否定（`!!`)
+    // Check for double negation (`!!`)
     if (expression.includes('!!')) {
       warnings.push({
         code: 'SEM-DOUBLE_NEGATION',
@@ -287,7 +287,7 @@ export class ValidationPipeline {
   }
 
   /**
-   * Stage 4: Context Check — 上下文引用验证
+   * Stage 4: Context Check — context reference validation
    */
   private validateContext(expression: string, contextSchema?: ContextSchema): StageResult {
     const errors: ValidationError[] = [];
@@ -302,10 +302,10 @@ export class ValidationPipeline {
       return { passed: true, errors, warnings };
     }
 
-    // 提取表达式中的所有引用
+    // Extract all references from expression
     const refs = this.extractReferences(expression);
 
-    // 验证 root 引用
+    // Validate root references
     if (contextSchema.root) {
       const rootName = contextSchema.root.name;
       for (const ref of refs) {
@@ -323,7 +323,7 @@ export class ValidationPipeline {
       }
     }
 
-    // 验证变量引用
+    // Validate variable references
     for (const ref of refs) {
       if (ref.startsWith('#') && !ref.includes('.')) {
         const varName = ref.slice(1);
@@ -340,7 +340,7 @@ export class ValidationPipeline {
       }
     }
 
-    // 验证 Bean 引用
+    // Validate Bean references
     const beanMatch = expression.match(/@(\w+)/g);
     if (beanMatch && contextSchema.beans) {
       for (const b of beanMatch) {
@@ -363,7 +363,7 @@ export class ValidationPipeline {
   }
 
   /**
-   * 检查括号是否平衡
+   * Check if parentheses are balanced
    */
   private hasBalancedParentheses(expression: string): boolean {
     const stack: string[] = [];
@@ -382,18 +382,18 @@ export class ValidationPipeline {
   }
 
   /**
-   * 提取表达式中的所有标识符引用
+   * Extract all identifier references from expression
    */
   private extractReferences(expression: string): string[] {
     const refs: string[] = [];
 
-    // #root.field 模式
+    // #root.field pattern
     const varMatch = expression.matchAll(/#(\w+(?:\.\w+(?:\.\w+)?)?)/g);
     for (const m of varMatch) {
       refs.push(`#${m[1]!}`);
     }
 
-    // #variable 模式
+    // #variable pattern
     const simpleMatch = expression.matchAll(/#(\w+)(?!\w*\()/g);
     for (const m of simpleMatch) {
       const ref = `#${m[1]!}`;

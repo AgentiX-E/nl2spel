@@ -6,24 +6,24 @@ import { SchemaFormatter } from '../../context/schema-formatter.js';
 // System Prompts
 // ============================================================
 
-const SYSTEM_PROMPT_ZH = `你是一个 Spring Expression Language (SpEL) 专家。你的任务是将自然语言描述转换为精确的 SpEL 表达式。
+const SYSTEM_PROMPT_ZH = `You are a Spring Expression Language (SpEL) expert. Your task is to convert natural language descriptions into precise SpEL expressions.
 
-## 规则
-1. SpEL 使用 #variable 引用变量，使用 #root.field 引用根对象的字段
-2. 字符串字面量使用单引号：'value'
-3. 空值比较：== null 或 != null
-4. 逻辑运算符：and、or、not（不是 &&、||、!）
-5. 比较运算符：==、!=、>、<、>=、<=
-6. 三元运算符使用 Elvis 语法：value ?: default
-7. 方法调用：list.contains('item')、list.size()、list.isEmpty()
-8. 集合投影：list.?[condition]、list.^[condition]、list.![projection]
-9. 范围检查：value between {min, max}
-10. 类型检查：variable instanceof T(ClassName)
-11. 权限检查：hasRole('role')、hasPermission('permission')
-12. 日期比较：field.after(T(java.util.Date).valueOf('date'))、field.before(...)
+## Rules
+1. SpEL uses #variable to reference variables, and #root.field to reference root object fields
+2. String literals use single quotes: 'value'
+3. Null comparison: == null or != null
+4. Logical operators: and, or, not (NOT &&, ||, !)
+5. Comparison operators: ==, !=, >, <, >=, <=
+6. Ternary operator uses Elvis syntax: value ?: default
+7. Method calls: list.contains('item'), list.size(), list.isEmpty()
+8. Collection projection: list.?[condition], list.^[condition], list.![projection]
+9. Range check: value between {min, max}
+10. Type check: variable instanceof T(ClassName)
+11. Permission check: hasRole('role'), hasPermission('permission')
+12. Date comparison: field.after(T(java.util.Date).valueOf('date')), field.before(...)
 
-## 输出格式
-只输出 SpEL 表达式，不要包含任何解释或注释。`;
+## Output Format
+Output ONLY the SpEL expression. Do not include any explanation or comments.`;
 
 const SYSTEM_PROMPT_EN = `You are a Spring Expression Language (SpEL) expert. Convert natural language descriptions into precise SpEL expressions.
 
@@ -199,9 +199,9 @@ const FEWSHOT_EXAMPLES: FewShotExample[] = [
 // ============================================================
 
 export interface PromptBuilderOptions {
-  /** 语言 (zh/en) */
+  /** Language (zh/en) */
   language?: 'zh' | 'en';
-  /** 是否包含 EBNF 语法块 */
+  /** Whether to include EBNF grammar block */
   includeEBNF?: boolean;
 }
 
@@ -209,7 +209,7 @@ export class PromptBuilder {
   private readonly formatter = new SchemaFormatter();
 
   /**
-   * 构建完整的 LLM Prompt
+   * Build a complete LLM Prompt
    */
   public build(
     userInput: string,
@@ -221,7 +221,7 @@ export class PromptBuilder {
 
     const systemPrompt = lang === 'zh' ? SYSTEM_PROMPT_ZH : SYSTEM_PROMPT_EN;
 
-    // 构建 user prompt
+    // Build user prompt
     const parts: string[] = [this.buildExamples(lang)];
 
     if (contextSchema && contextSchema.root) {
@@ -251,7 +251,7 @@ export class PromptBuilder {
   }
 
   /**
-   * 构建 Few-Shot 示例字符串
+   * Build Few-Shot example string
    */
   private buildExamples(lang: 'zh' | 'en'): string {
     const lines: string[] = [];
@@ -268,7 +268,7 @@ export class PromptBuilder {
           );
 
     if (lang === 'zh') {
-      lines.push('## 示例 (Few-Shot Examples)');
+      lines.push('## Examples (Few-Shot)');
     } else {
       lines.push('## Few-Shot Examples');
     }

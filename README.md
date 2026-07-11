@@ -1,8 +1,8 @@
 # NL2SpEL
 
-> Natural Language → Spring Expression Language (SpEL) 生成引擎
+> Natural Language → Spring Expression Language (SpEL) Generation Engine
 >
-> 四层混合架构（模式匹配 + 语义槽位 + LLM API + WebLLM 本地），支持中英双语
+> Four-layer hybrid architecture (Pattern Matching + Semantic Slots + LLM API + WebLLM Local), supporting Chinese & English
 
 [![CI](https://github.com/AgentiX-E/nl2spel/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/nl2spel/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](https://agentix-e.github.io/nl2spel/coverage)
@@ -11,7 +11,7 @@
 
 ---
 
-## 架构总览
+## Architecture Overview
 
 ```
                     ┌─────────────────────────────────┐
@@ -39,46 +39,46 @@
                                           └────────────────────┘
 ```
 
-## 包结构
+## Package Structure
 
-| 包 | 描述 | 测试 | 依赖 |
+| Package | Description | Tests | Dependencies |
 |---|------|------|------|
-| [`@agentix-e/nl2spel`](./packages/nl2spel/README.md) | 核心引擎 | 388 | 零外部依赖 |
+| [`@agentix-e/nl2spel`](./packages/nl2spel/README.md) | Core Engine | 388 | Zero external deps |
 | [`@agentix-e/nl2spel-openai`](./packages/nl2spel-openai/README.md) | LLM API Provider | 19 | core |
-| [`@agentix-e/nl2spel-webllm`](./packages/nl2spel-webllm/README.md) | 浏览器本地 LLM | 56 | core |
+| [`@agentix-e/nl2spel-webllm`](./packages/nl2spel-webllm/README.md) | Browser-local LLM | 56 | core |
 
-- [API 文档](https://agentix-e.github.io/nl2spel/api)
-- [覆盖率报告](https://agentix-e.github.io/nl2spel/coverage)
-- [性能基准](https://agentix-e.github.io/nl2spel/benchmark)
+- [API Documentation](https://agentix-e.github.io/nl2spel/api)
+- [Coverage Report](https://agentix-e.github.io/nl2spel/coverage)
+- [Performance Benchmark](https://agentix-e.github.io/nl2spel/benchmark)
 
-## 快速开始
+## Quick Start
 
-### 安装
+### Installation
 
 ```bash
-# 核心引擎（离线可用）
+# Core engine (offline-ready)
 npm install @agentix-e/nl2spel
 
-# LLM API Provider（可选）
+# LLM API Provider (optional)
 npm install @agentix-e/nl2spel-openai
 
-# WebLLM Provider（可选，浏览器专用）
+# WebLLM Provider (optional, browser-only)
 npm install @agentix-e/nl2spel-webllm
 ```
 
-### 基础用法
+### Basic Usage
 
 ```typescript
 import { NL2SpelEngine } from '@agentix-e/nl2spel';
 
 const engine = new NL2SpelEngine();
 
-// 模式匹配（离线，< 1ms）
-const r1 = await engine.generate('订单金额大于1000');
+// Pattern matching (offline, < 1ms)
+const r1 = await engine.generate('Order amount greater than 1000');
 // { expression: "#order.amount > 1000", strategy: "pattern", confidence: 0.95 }
 
-// 语义槽位填充
-const r2 = await engine.generate('年龄在18到60之间');
+// Semantic slot filling
+const r2 = await engine.generate('Age between 18 and 60');
 // { expression: "#user.age between {18, 60}", strategy: "template", confidence: 0.9 }
 ```
 
@@ -97,47 +97,47 @@ engine.registerProvider(
 );
 
 const result = await engine.generate(
-  '筛选出金额大于1000且状态为已发货的订单'
+  'Filter orders with amount greater than 1000 and status is shipped'
 );
 ```
 
-### 批量生成
+### Batch Generation
 
 ```typescript
 const results = await engine.generateBatch([
-  '金额大于100',
-  '用户是VIP',
-  '备注不为空且状态为已确认',
+  'Amount greater than 100',
+  'User is VIP',
+  'Note is not empty and status is confirmed',
 ]);
 ```
 
-### 调试解释
+### Debug / Explain
 
 ```typescript
-const explanation = await engine.explain('订单金额大于1000且用户是VIP');
+const explanation = await engine.explain('Order amount greater than 1000 and user is VIP');
 console.log(explanation.intent);     // { primary: "LOGICAL", complexity: 25, ... }
 console.log(explanation.strategy);   // "pattern" | "template" | "llm-api"
 ```
 
-## 性能 SLO
+## Performance SLO
 
-| 指标 | 目标 | 实际 |
+| Metric | Target | Actual |
 |------|------|------|
-| Pattern 匹配延迟 (P99) | ≤ 1ms | < 0.5ms |
-| Template 生成延迟 | ≤ 10ms | < 5ms |
-| Intent 分类 | < 5ms | < 2ms |
+| Pattern match latency (P99) | ≤ 1ms | < 0.5ms |
+| Template generation latency | ≤ 10ms | < 5ms |
+| Intent classification | < 5ms | < 2ms |
 
-[查看完整性能基准 →](https://agentix-e.github.io/nl2spel/benchmark)
+[View full performance benchmark →](https://agentix-e.github.io/nl2spel/benchmark)
 
-## 策略与准确率
+## Strategy & Accuracy
 
-| 难度 | 测试数 | Pattern | Template | LLM (GPT-4o-mini) | 综合目标 |
+| Difficulty | Tests | Pattern | Template | LLM (GPT-4o-mini) | Combined Target |
 |------|-------|---------|----------|-------------------|---------|
 | Easy | 50 | 80% | 10% | 5% | ≥ 95% |
 | Medium | 70 | — | 60% | 28% | ≥ 88% |
 | Hard | 30 | — | — | 80% | ≥ 80% |
 
-## 开发
+## Development
 
 ```bash
 pnpm install
@@ -146,6 +146,6 @@ pnpm test
 pnpm lint
 ```
 
-## 许可证
+## License
 
 MIT © 2025 Agentix-E

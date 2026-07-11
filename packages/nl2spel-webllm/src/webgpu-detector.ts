@@ -1,22 +1,22 @@
 /**
- * WebGPU 检测器 — 检测浏览器是否支持 WebGPU。
+ * WebGPU detector — detects whether the browser supports WebGPU.
  */
 export interface WebGPUDetectionResult {
-  /** WebGPU 是否可用 */
+  /** Whether WebGPU is available */
   available: boolean;
-  /** GPU 适配器信息（如果可用） */
+  /** GPU adapter info (if available) */
   adapterInfo?: {
     vendor: string;
     architecture: string;
     description: string;
     device: string;
   };
-  /** 错误信息（如果不可用） */
+  /** Error message (if not available) */
   error?: string;
 }
 
 export async function detectWebGPU(): Promise<WebGPUDetectionResult> {
-  // 检查 navigator.gpu 是否存在
+  // Check if navigator.gpu exists
   if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
     return {
       available: false,

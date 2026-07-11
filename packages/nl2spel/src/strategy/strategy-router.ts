@@ -8,7 +8,7 @@ import type { TemplateResult } from '../template/template-engine.js';
 import { PromptBuilder } from '../template/prompts/prompt-builder.js';
 import { ProviderRegistry } from '../provider/provider-registry.js';
 import type { LLMProvider, LLMPrompt } from '../provider/llm-provider.js';
-import type { ContextSchema } from '../SpelEvaluator.js';
+import type { ContextSchema, SpelEvaluator } from '../SpelEvaluator.js';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
 import { AutoFixer } from '../validation/auto-fixer.js';
 import { SelfCorrectionLoop } from '../validation/self-correction-loop.js';
@@ -16,55 +16,55 @@ import { SelfCorrectionLoop } from '../validation/self-correction-loop.js';
 export type StrategyType = 'pattern' | 'template' | 'llm-api' | 'llm-fallback' | 'none';
 
 export interface StrategyResult {
-  /** 生成的 SpEL 表达式 */
+  /** Generated SpEL expression */
   expression: string;
 
-  /** 使用的策略 */
+  /** Strategy used */
   strategy: StrategyType;
 
-  /** 置信度 (0-1) */
+  /** Confidence (0-1) */
   confidence: number;
 
-  /** 策略相关的元数据 */
+  /** Strategy-related metadata */
   metadata: StrategyMetadata;
 
-  /** 生成耗时 (ms) */
+  /** Generation latency (ms) */
   latencyMs: number;
 }
 
 export interface StrategyMetadata {
-  /** 命中的模式 ID (仅 pattern 策略) */
+  /** Matched pattern ID (pattern strategy only) */
   patternId?: string;
 
-  /** 意图类型 (仅 template 策略) */
+  /** Intent type (template strategy only) */
   intent?: string;
 
-  /** 模板名称 (仅 template 策略) */
+  /** Template name (template strategy only) */
   templateName?: string;
 
-  /** LLM Provider 名称 (仅 llm 策略) */
+  /** LLM Provider name (llm strategy only) */
   providerName?: string;
 
-  /** LLM 模型 (仅 llm 策略) */
+  /** LLM model (llm strategy only) */
   model?: string;
 
-  /** 修正次数 (仅 llm 策略 + self-correction) */
+  /** Correction count (llm strategy + self-correction only) */
   corrections?: number;
 
-  /** 原始 LLM 输出 (仅 llm 策略) */
+  /** Raw LLM output (llm strategy only) */
   rawOutput?: string;
 }
 
 export interface StrategyRouterConfig {
-  /** Pattern 置信度阈值 (默认 0.7) */
+  /** Pattern confidence threshold (default 0.7) */
   patternMinConfidence?: number;
-  /** Template 置信度阈值 (默认 0.6) */
+  /** Template confidence threshold (default 0.6) */
   templateMinConfidence?: number;
-  /** LLM 置信度阈值 (默认 0.5) */
+  /** LLM confidence threshold (default 0.5) */
   llmMinConfidence?: number;
-  /** 是否启用 Self-Correction (默认 true) */
+  /** Whether Self-Correction is enabled (default true) */
   enableSelfCorrection?: boolean;
-  /** Self-Correction 最大尝试次数 (默认 3) */
+  /** Maximum Self-Correction attempts (default 3) */
   maxCorrectionAttempts?: number;
 }
 
@@ -96,7 +96,7 @@ export class StrategyRouter {
   }
 
   /**
-   * 执行完整的生成策略路由
+   * Execute the full generation strategy routing
    */
   public async generate(
     nl: string,
@@ -113,7 +113,7 @@ export class StrategyRouter {
     const patternResult = this.patternMatcher.match(nl);
 
     if (patternResult.matched && patternResult.confidence >= this.config.patternMinConfidence!) {
-      // 验证 pattern 结果
+      // Validate pattern result
       const validation = await this.validationPipeline.validate(patternResult.spel!, contextSchema);
 
       if (validation.valid) {
@@ -126,35 +126,44 @@ export class StrategyRouter {
         };
       }
 
-      // Pattern 结果验证失败，尝试 AutoFix
-      const afResult = this.autoFixer.fix(patternResult.spel!);
-      if (afResult.wasFixed) {
-        const afValidation = await this.validationPipeline.validate(
-          afResult.expression,
-          contextSchema,
-        );
-        if (afValidation.valid) {
-          return {
-            expression: afResult.expression,
-            strategy: 'pattern',
-            confidence: patternResult.confidence * 0.95,
-            metadata: { patternId: patternResult.pattern?.id },
-            latencyMs: Date.now() - startTime,
-          };
+      // Pattern result validation failed, try AutoFix
+      try {
+        const afResult = this.autoFixer.fix(patternResult.spel!);
+        if (afResult.wasFixed) {
+          const afValidation = await this.validationPipeline.validate(
+            afResult.expression,
+            contextSchema,
+          );
+          if (afValidation.valid) {
+            return {
+              expression: afResult.expression,
+              strategy: 'pattern',
+              confidence: patternResult.confidence * 0.95,
+              metadata: { patternId: patternResult.pattern?.id },
+              latencyMs: Date.now() - startTime,
+            };
+          }
         }
+      } catch {
+        // AutoFix failed, fall through to template/LLM layers
       }
     }
 
     // ---------- Layer 1: Template ----------
     const intentResult = this.intentClassifier.classify(nl);
-    const templateResult = this.templateEngine.generate(nl, intentResult);
+    let templateResult: TemplateResult | null = null;
+    try {
+      templateResult = this.templateEngine.generate(nl, intentResult);
+    } catch {
+      // Template generation failed, fall through to LLM fallback
+    }
 
     if (
       templateResult &&
       templateResult.confidence >= this.config.templateMinConfidence! &&
       templateResult.unfilledSlots.length === 0
     ) {
-      // 验证模板结果
+      // Validate template result
       const validation = await this.validationPipeline.validate(
         templateResult.expression,
         contextSchema,
@@ -175,13 +184,13 @@ export class StrategyRouter {
     }
 
     // ---------- Layer 2: LLM ----------
-    // 构建 prompt
+    // Build prompt
     const prompt = this.promptBuilder.build(nl, contextSchema);
 
-    // 获取可用提供者
+    // Get available providers
     let providers = await this.providerRegistry.getPrioritized();
 
-    // 如果指定了特定 provider，优先使用
+    // If a specific provider is forced, use it first
     if (forceLLMProvider) {
       const forced = providers.find(p => p.name === forceLLMProvider);
       if (forced) {
@@ -202,7 +211,7 @@ export class StrategyRouter {
         let expression = response.text.trim();
         let corrections = 0;
 
-        // Self-Correction 循环
+        // Self-Correction loop
         if (this.config.enableSelfCorrection && contextSchema) {
           const correctionLoop = new SelfCorrectionLoop({
             maxAttempts: this.config.maxCorrectionAttempts,
@@ -231,33 +240,41 @@ export class StrategyRouter {
         };
       } catch (err) {
         lastError = err as Error;
-        // 尝试下一个 provider
+        // Try next provider
         continue;
       }
     }
 
-    // 所有 provider 失败
+    // All providers failed
     throw new Error(`All LLM providers failed. Last error: ${lastError?.message ?? 'Unknown'}`);
   }
 
   /**
-   * 获取 PatternMatcher（用于外部测试/调试）
+   * Get PatternMatcher (for external testing/debugging)
    */
   public getPatternMatcher(): PatternMatcher {
     return this.patternMatcher;
   }
 
   /**
-   * 获取 TemplateEngine
+   * Get TemplateEngine
    */
   public getTemplateEngine(): TemplateEngine {
     return this.templateEngine;
   }
 
   /**
-   * 获取 PromptBuilder
+   * Get PromptBuilder
    */
   public getPromptBuilder(): PromptBuilder {
     return this.promptBuilder;
+  }
+
+  /**
+   * Set SpelEvaluator for validation pipeline.
+   * Must be called before generate() if parse-level validation is needed.
+   */
+  public setEvaluator(evaluator: SpelEvaluator): void {
+    this.validationPipeline.setEvaluator(evaluator);
   }
 }

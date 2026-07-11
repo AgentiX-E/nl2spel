@@ -1,24 +1,24 @@
 /**
- * WebLLM 模型配置表 — 4 个优化的小模型。
+ * WebLLM model configuration table — 4 optimized small models.
  */
 export interface ModelConfig {
-  /** 模型 ID (WebLLM model repo id) */
+  /** Model ID (WebLLM model repo id) */
   modelId: string;
-  /** 显示名称 */
+  /** Display name */
   displayName: string;
-  /** 上下文窗口 (tokens) */
+  /** Context window (tokens) */
   maxContextTokens: number;
-  /** 模型大小 (GB) */
+  /** Model size (GB) */
   modelSizeGB: number;
-  /** VRAM 需求 (GB) */
+  /** VRAM requirement (GB) */
   vramRequiredGB: number;
-  /** 最低 WebGPU 等级要求 */
+  /** Minimum WebGPU tier requirement */
   minWebGPU: 'low' | 'medium' | 'high';
-  /** 推理速度估算 (tok/s) */
+  /** Estimated inference speed (tok/s) */
   estimatedTokPerSec: number;
-  /** 模型 HF 仓库 */
+  /** Model HF repository */
   hfRepo: string;
-  /** 量化级别 */
+  /** Quantization level */
   quantization: string;
 }
 
@@ -72,7 +72,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
   },
 };
 
-/** 按 VRAM 需求排序的模型推荐 */
+/** Model recommendation sorted by VRAM requirement */
 export function recommendModel(vramGB: number): string {
   const models = Object.entries(MODEL_CONFIGS)
     .filter(([, config]) => config.vramRequiredGB <= vramGB)
@@ -82,7 +82,7 @@ export function recommendModel(vramGB: number): string {
     return models[0]![0]!;
   }
 
-  // 如果都不满足，返回最小的
+  // If none fit, return the smallest model
   const smallest = Object.entries(MODEL_CONFIGS).sort(
     ([, a], [, b]) => a.vramRequiredGB - b.vramRequiredGB,
   );

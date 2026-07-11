@@ -1,25 +1,25 @@
 import { NLIntent } from './nl-intent.js';
 
 /**
- * 意图分类结果
+ * Intent classification result
  */
 export interface IntentResult {
-  /** 主要意图（置信度最高） */
+  /** Primary intent (highest confidence) */
   primaryIntent: NLIntent;
 
-  /** 所有可能性意图及其置信度 */
+  /** All possible intents with confidence scores */
   intents: Array<{ intent: NLIntent; confidence: number }>;
 
-  /** 提取的实体 */
+  /** Extracted entities */
   entities: IntentEntity[];
 
-  /** 识别到的运算符 */
+  /** Recognized operators */
   operators: string[];
 
-  /** 识别到的逻辑连接词 */
+  /** Recognized logical connectors */
   logicalConnectors: string[];
 
-  /** 复杂度评分 (0-100) */
+  /** Complexity score (0-100) */
   complexity: number;
 }
 
@@ -30,7 +30,7 @@ export interface IntentEntity {
 }
 
 /**
- * 意图关键词映射表
+ * Intent keyword mapping table
  */
 const INTENT_KEYWORDS: Record<NLIntent, { zh: string[]; en: string[] }> = {
   [NLIntent.COMPARISON]: {
@@ -108,14 +108,15 @@ const INTENT_KEYWORDS: Record<NLIntent, { zh: string[]; en: string[] }> = {
 
 export class IntentClassifier {
   /**
-   * 分类自然语言输入的主方法
+   * Main method for classifying natural language input
    */
   public classify(input: string): IntentResult {
     const normalized = this.normalize(input);
 
-    // Step 1: 关键词匹配 → 意图打分
+    // Step 1: Keyword matching → intent scoring
     const intentScores = new Map<NLIntent, number>();
-    for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
+    for (const intent of Object.keys(INTENT_KEYWORDS) as NLIntent[]) {
+      const keywords = INTENT_KEYWORDS[intent];
       let score = 0;
       for (const kw of keywords.zh) {
         if (normalized.includes(kw)) score += 3;
@@ -123,7 +124,7 @@ export class IntentClassifier {
       for (const kw of keywords.en) {
         if (normalized.toLowerCase().includes(kw.toLowerCase())) score += 2;
       }
-      if (score > 0) intentScores.set(intent as NLIntent, score);
+      if (score > 0) intentScores.set(intent, score);
     }
 
     // Pattern-based boosting
@@ -135,7 +136,7 @@ export class IntentClassifier {
     if (/between\s+\S+\s+(and|,)\s+\S+/i.test(normalized)) {
       intentScores.set(NLIntent.RANGE, (intentScores.get(NLIntent.RANGE) ?? 0) + 3);
     }
-    // Boost TYPE_CHECK if "instanceof" or "类型" present
+    // Boost TYPE_CHECK if "instanceof" or type keywords present
     if (/instanceof/i.test(normalized) || (/是否是/.test(normalized) && /类型/.test(normalized))) {
       intentScores.set(NLIntent.TYPE_CHECK, (intentScores.get(NLIntent.TYPE_CHECK) ?? 0) + 3);
     }
@@ -148,16 +149,16 @@ export class IntentClassifier {
       intentScores.set(NLIntent.COLLECTION, (intentScores.get(NLIntent.COLLECTION) ?? 0) + 1);
     }
 
-    // Step 2: 实体提取
+    // Step 2: Entity extraction
     const entities = this.extractEntities(normalized);
 
-    // Step 3: 运算符识别
+    // Step 3: Operator recognition
     const operators = this.extractOperators(normalized);
 
-    // Step 4: 逻辑连接词识别
+    // Step 4: Logical connector recognition
     const logicalConnectors = this.extractLogicalConnectors(normalized);
 
-    // Step 5: 复杂度评分
+    // Step 5: Complexity scoring
     const complexity = this.calculateComplexity(
       normalized,
       intentScores,
@@ -166,7 +167,7 @@ export class IntentClassifier {
       logicalConnectors,
     );
 
-    // Step 6: 排序意图
+    // Step 6: Sort intents
     const sortedIntents = Array.from(intentScores.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([intent, score]) => ({
@@ -188,12 +189,12 @@ export class IntentClassifier {
   }
 
   /**
-   * 实体提取
+   * Entity extraction
    */
   private extractEntities(normalized: string): IntentEntity[] {
     const entities: IntentEntity[] = [];
 
-    // 数值提取
+    // Numeric value extraction
     const numRegex = /\b(\d+(?:\.\d+)?)\b/g;
     let match;
     while ((match = numRegex.exec(normalized)) !== null) {
@@ -204,7 +205,7 @@ export class IntentClassifier {
       });
     }
 
-    // 引号字符串提取
+    // Quoted string extraction
     const strRegex = /['""]([^'""]*)['""]/g;
     while ((match = strRegex.exec(normalized)) !== null) {
       entities.push({
@@ -214,7 +215,7 @@ export class IntentClassifier {
       });
     }
 
-    // 运算符位置提取
+    // Operator position extraction
     for (const op of ['>=', '<=', '!=', '==', '>', '<', '=']) {
       let idx = normalized.indexOf(op);
       if (idx >= 0) {
@@ -230,7 +231,7 @@ export class IntentClassifier {
   }
 
   /**
-   * 运算符识别
+   * Operator recognition
    */
   private extractOperators(normalized: string): string[] {
     const operators: string[] = [];
@@ -257,7 +258,7 @@ export class IntentClassifier {
   }
 
   /**
-   * 逻辑连接词识别
+   * Logical connector recognition
    */
   private extractLogicalConnectors(normalized: string): string[] {
     const connectors: string[] = [];
@@ -273,7 +274,7 @@ export class IntentClassifier {
   }
 
   /**
-   * 复杂度计算
+   * Complexity calculation
    */
   private calculateComplexity(
     input: string,
@@ -284,33 +285,33 @@ export class IntentClassifier {
   ): number {
     let complexity = 0;
 
-    // 基础: 输入长度
+    // Base: input length
     complexity += Math.min(input.length / 5, 15);
 
-    // 命中多个意图 → 高复杂度
+    // Multiple intents hit → higher complexity
     complexity += (intentScores.size - 1) * 10;
 
-    // 逻辑连接词
+    // Logical connectors
     complexity += logicalConnectors.length * 15;
 
-    // 实体数量
+    // Entity count
     complexity += entities.length * 5;
 
-    // 运算符数量
+    // Operator count
     complexity += operators.length * 8;
 
     return Math.max(0, Math.min(complexity, 100));
   }
 
   /**
-   * 输入规范化
+   * Input normalization
    */
   private normalize(input: string): string {
     return (
       input
         .trim()
         .toLowerCase()
-        // 全角转半角
+        // Full-width to half-width
         .replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
         .replace(/\s+/g, ' ')
     );

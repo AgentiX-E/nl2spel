@@ -60,7 +60,7 @@ describe('PromptBuilder', () => {
   describe('PB-G03: Few-Shot Examples', () => {
     it('should include few-shot examples', () => {
       const prompt = builder.build('金额大于1000', TEST_SCHEMA);
-      expect(prompt.user).toContain('示例');
+      expect(prompt.user).toContain('Examples');
       expect(prompt.examples.length).toBeGreaterThan(0);
     });
 

@@ -12,19 +12,19 @@ import { MODEL_CONFIGS, type ModelConfig } from './model-configs.js';
 import { detectWebGPU } from './webgpu-detector.js';
 
 export interface WebLLMConfig {
-  /** 模型 ID */
+  /** Model ID */
   model: string;
 
-  /** 自定义模型配置（可选择性覆盖） */
+  /** Custom model config (optional override) */
   customModelConfig?: Partial<ModelConfig>;
 
-  /** 加载进度回调 */
+  /** Load progress callback */
   onProgress?: (progress: ModelLoadProgress) => void;
 
-  /** 是否启用 GBNF 语法约束（默认 true） */
+  /** Whether to enable GBNF grammar constraints (default true) */
   enableGrammar?: boolean;
 
-  /** 是否在控制台输出日志 */
+  /** Whether to output logs to console */
   debug?: boolean;
 }
 
@@ -32,16 +32,16 @@ export interface ModelLoadProgress {
   progress: number; // 0-1
   loaded: number; // bytes
   total: number; // bytes
-  text: string; // 阶段描述
+  text: string; // Current phase description
 }
 
 /**
- * WebLLMProvider — 浏览器端本地 LLM Provider。
+ * WebLLMProvider — browser-side local LLM provider.
  *
- * 实现 LLMProvider 接口，在浏览器中使用 WebLLM (@mlc-ai/web-llm)
- * 运行本地大模型，支持 GBNF 语法约束解码。
+ * Implements the LLMProvider interface, using WebLLM (@mlc-ai/web-llm)
+ * to run local models in the browser, with GBNF grammar-constrained decoding.
  *
- * 注意：此 Provider 仅工作在浏览器环境（依赖 WebGPU 和 navigator.gpu）。
+ * Note: this provider only works in browser environments (requires WebGPU and navigator.gpu).
  */
 export class WebLLMProvider implements LLMProvider {
   public readonly name = 'webllm';
@@ -75,13 +75,13 @@ export class WebLLMProvider implements LLMProvider {
       supportsStreaming: true,
       supportsStructuredOutput: false,
       offlineAvailable: true,
-      estimatedCostPerRequest: 0, // 本地推理，零 API 成本
+      estimatedCostPerRequest: 0, // Local inference, zero API cost
       estimatedLatencyMs: Math.round((1000 / this.modelConfig.estimatedTokPerSec) * 50),
     };
   }
 
   /**
-   * 初始化 — 检查 WebGPU 并下载/加载模型。
+   * Initialize — check WebGPU and download/load the model.
    */
   async initialize(): Promise<void> {
     if (this._initialized) return;
@@ -92,7 +92,7 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   private async _doInitialize(): Promise<void> {
-    // 1. 检查 WebGPU
+    // 1. Check WebGPU
     const webgpuResult = await detectWebGPU();
     if (!webgpuResult.available) {
       throw new Error(
@@ -105,13 +105,13 @@ export class WebLLMProvider implements LLMProvider {
       console.log('[WebLLM] WebGPU detected:', webgpuResult.adapterInfo);
     }
 
-    // 2. 动态导入 WebLLM (只在浏览器环境中)
+    // 2. Dynamic import of WebLLM (browser-only)
     try {
-      // WebLLM 是浏览器专用的，Node.js 环境会失败
-      // 使用动态 import，让包在 Node.js 测试中也能加载
+      // WebLLM is browser-specific; it will fail in Node.js environments
+      // Using dynamic import so the package can still be loaded for Node.js testing
       const { CreateMLCEngine } = await this.importWebLLM();
 
-      // 3. 创建引擎并加载模型
+      // 3. Create engine and load model
       const gpuLevel = this.determineGPULevel(webgpuResult);
 
       this._engine = await CreateMLCEngine(this.modelConfig.modelId, {
@@ -137,10 +137,10 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   /**
-   * 动态导入 WebLLM（分离导入便于测试 mock）
+   * Dynamic import of WebLLM (separated import for easier test mocking)
    */
   private async importWebLLM(): Promise<any> {
-    // 尝试动态导入，如果不在浏览器环境会失败
+    // Attempt dynamic import; will fail if not in a browser environment
     return import('@mlc-ai/web-llm');
   }
 
@@ -155,7 +155,7 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   /**
-   * 检查 Provider 是否可用
+   * Check if the provider is available
    */
   async isAvailable(): Promise<boolean> {
     try {
@@ -167,7 +167,7 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   /**
-   * 生成 SpEL 表达式
+   * Generate a SpEL expression
    */
   async generate(prompt: LLMPrompt, options?: LLMGenerateOptions): Promise<LLMResponse> {
     await this.ensureInitialized();
@@ -179,13 +179,13 @@ export class WebLLMProvider implements LLMProvider {
 
     const startTime = Date.now();
 
-    // 构建消息
+    // Build messages
     const messages = [
       { role: 'system' as const, content: prompt.system },
       { role: 'user' as const, content: prompt.user },
     ];
 
-    // 生成 GBNF 语法约束
+    // Generate GBNF grammar constraint
     let grammar: string | undefined;
     if (this.config.enableGrammar) {
       grammar = this.gbnfGenerator.generate(prompt.contextSchema);
@@ -221,7 +221,7 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   /**
-   * 流式生成（暂未实现，WebLLM 支持但需要额外处理）
+   * Streaming generation (not yet implemented; WebLLM supports it but needs extra handling)
    */
   async *generateStream(
     prompt: LLMPrompt,
@@ -229,8 +229,8 @@ export class WebLLMProvider implements LLMProvider {
   ): AsyncIterable<LLMStreamChunk> {
     await this.ensureInitialized();
 
-    // WebLLM 流式生成暂不实现（需要 @mlc-ai/web-llm stream API）
-    // 作为 fallback，生成完整结果后一次性输出
+    // WebLLM streaming generation is not yet implemented (requires @mlc-ai/web-llm stream API)
+    // As a fallback, generate the full result and output it all at once
     const result = await this.generate(prompt, options);
     yield {
       delta: result.text,
@@ -241,14 +241,14 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   /**
-   * 释放资源
+   * Release resources
    */
   async dispose(): Promise<void> {
     if (this._engine && typeof (this._engine as any).unload === 'function') {
       try {
         (this._engine as any).unload();
       } catch {
-        // 忽略卸载错误
+        // Ignore unload errors
       }
     }
     this._engine = null;

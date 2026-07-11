@@ -183,4 +183,161 @@ describe('SelfCorrectionLoop', () => {
 
     expect(result.totalLatencyMs).toBeGreaterThanOrEqual(0);
   });
+
+  // ===== Additional Coverage Tests =====
+  describe('Additional Coverage', () => {
+    it('correct expression passes immediately without any correction', async () => {
+      const loop = new SelfCorrectionLoop();
+      const generateFn = vi.fn();
+
+      const result = await loop.correct(
+        '#order.paid == true',
+        TEST_SCHEMA,
+        generateFn,
+        TEST_PROMPT,
+      );
+
+      expect(result.valid).toBe(true);
+      expect(result.correctionAttempts).toBe(0);
+      expect(result.corrections).toHaveLength(0);
+      expect(generateFn).not.toHaveBeenCalled();
+    });
+
+    it('expression that becomes valid after AutoFix only (no LLM needed)', async () => {
+      const loop = new SelfCorrectionLoop();
+      const generateFn = vi.fn();
+
+      const result = await loop.correct(
+        '#order.amount === 1000',
+        TEST_SCHEMA,
+        generateFn,
+        TEST_PROMPT,
+      );
+
+      expect(result.valid).toBe(true);
+      expect(result.correctionAttempts).toBeLessThanOrEqual(1);
+      expect(result.expression).not.toContain('===');
+      expect(result.expression).toContain('==');
+      expect(generateFn).not.toHaveBeenCalled();
+      // Auto-fix correction log should exist
+      const autoFixEntry = result.corrections.find(c => c.autoFixed);
+      expect(autoFixEntry).toBeDefined();
+      expect(autoFixEntry!.autoFixChanges.some(c => c.includes('==='))).toBe(true);
+    });
+
+    it('expression needing exactly 2 correction attempts', async () => {
+      const loop = new SelfCorrectionLoop({ maxAttempts: 2, enableAutoFix: false });
+      const generateFn = vi
+        .fn()
+        .mockResolvedValueOnce(createSuccessfulResponse('#bad [[['))
+        .mockResolvedValueOnce(createSuccessfulResponse('#order.amount > 1000'));
+
+      const result = await loop.correct('#bad [[[', TEST_SCHEMA, generateFn, TEST_PROMPT);
+
+      expect(result.valid).toBe(true);
+      expect(result.correctionAttempts).toBe(2);
+      expect(generateFn).toHaveBeenCalledTimes(2);
+      expect(result.corrections).toHaveLength(2);
+      expect(result.corrections[0]!.attempt).toBe(1);
+      expect(result.corrections[1]!.attempt).toBe(2);
+    });
+
+    it('maxAttempts=0 should return immediately with valid=false', async () => {
+      const loop = new SelfCorrectionLoop({ maxAttempts: 0, enableAutoFix: false });
+      const generateFn = vi.fn();
+
+      const result = await loop.correct('#invalid [[[', TEST_SCHEMA, generateFn, TEST_PROMPT);
+
+      expect(result.valid).toBe(false);
+      expect(result.correctionAttempts).toBe(0);
+      expect(generateFn).not.toHaveBeenCalled();
+    });
+
+    it('LLM throws during correction (error handling)', async () => {
+      const loop = new SelfCorrectionLoop({ maxAttempts: 2, enableAutoFix: false });
+      const generateFn = vi.fn().mockRejectedValue(new Error('LLM service unavailable'));
+
+      const result = await loop.correct('#bad [[[', TEST_SCHEMA, generateFn, TEST_PROMPT);
+
+      expect(result.valid).toBe(false);
+      expect(result.correctionAttempts).toBe(2);
+      expect(generateFn).toHaveBeenCalledTimes(2);
+      // Correction log entries should record the failure
+      expect(result.corrections.every(c => !c.valid)).toBe(true);
+      for (const entry of result.corrections) {
+        expect(entry.errorCount).toBe(1);
+      }
+    });
+
+    it('double auto-fix with quote fix', async () => {
+      const loop = new SelfCorrectionLoop();
+      const generateFn = vi.fn();
+
+      const result = await loop.correct(
+        '#order.status === "pending',
+        TEST_SCHEMA,
+        generateFn,
+        TEST_PROMPT,
+      );
+
+      expect(result.valid).toBe(true);
+      expect(result.expression).not.toContain('===');
+      expect(generateFn).not.toHaveBeenCalled();
+
+      // Should have a correction log entry for the auto-fix
+      expect(result.corrections.length).toBeGreaterThanOrEqual(1);
+      const autoFixEntry = result.corrections.find(c => c.autoFixed);
+      expect(autoFixEntry).toBeDefined();
+      // Auto-fix should include both === fix and double-quote fix
+      expect(autoFixEntry!.autoFixChanges.some(c => c.includes('==='))).toBe(true);
+      expect(autoFixEntry!.autoFixChanges.some(c => c.includes('quote'))).toBe(true);
+    });
+
+    it('verify correction log entry format and content', async () => {
+      const loop = new SelfCorrectionLoop({ maxAttempts: 1, enableAutoFix: false });
+      const generateFn = vi
+        .fn()
+        .mockResolvedValueOnce(createSuccessfulResponse('#order.amount > 1000'));
+
+      const result = await loop.correct('#bad [[[', TEST_SCHEMA, generateFn, TEST_PROMPT);
+
+      expect(result.corrections.length).toBeGreaterThan(0);
+
+      for (const entry of result.corrections) {
+        // Verify all required fields are present with correct types
+        expect(entry).toHaveProperty('attempt');
+        expect(entry).toHaveProperty('expression');
+        expect(entry).toHaveProperty('valid');
+        expect(entry).toHaveProperty('errorCount');
+        expect(entry).toHaveProperty('warningCount');
+        expect(entry).toHaveProperty('autoFixed');
+        expect(entry).toHaveProperty('autoFixChanges');
+
+        expect(typeof entry.attempt).toBe('number');
+        expect(typeof entry.expression).toBe('string');
+        expect(typeof entry.valid).toBe('boolean');
+        expect(typeof entry.errorCount).toBe('number');
+        expect(typeof entry.warningCount).toBe('number');
+        expect(typeof entry.autoFixed).toBe('boolean');
+        expect(Array.isArray(entry.autoFixChanges)).toBe(true);
+
+        // attempt should be a positive integer (1-based for LLM corrections)
+        expect(entry.attempt).toBeGreaterThan(0);
+      }
+    });
+
+    it('should apply auto-fix after LLM correction inside the loop', async () => {
+      // enableAutoFix: true (default), LLM returns expression with === that auto-fix can handle
+      const loop = new SelfCorrectionLoop({ maxAttempts: 2 });
+      const generateFn = vi
+        .fn()
+        .mockResolvedValueOnce(createSuccessfulResponse('#order.amount === 1000'));
+
+      const result = await loop.correct('#invalid [[[', TEST_SCHEMA, generateFn, TEST_PROMPT);
+
+      // Auto-fix at line 169 should fix ===
+      expect(result.valid).toBe(true);
+      expect(result.expression).not.toContain('===');
+    });
+  });
 });

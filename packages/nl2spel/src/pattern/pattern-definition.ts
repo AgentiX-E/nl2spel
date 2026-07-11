@@ -1,57 +1,57 @@
 /**
- * 模式定义 —— Layer 0 的核心数据结构。
+ * Pattern definition — core data structures for Layer 0.
  *
- * 每条 PatternDefinition 描述一个自然语言模式到 SpEL 表达式的映射。
- * 支持中文和英文双语言。
+ * Each PatternDefinition describes a mapping from natural language pattern to SpEL expression.
+ * Supports both Chinese and English languages.
  */
 export interface PatternDefinition {
-  /** 唯一标识符 */
+  /** Unique identifier */
   id: string;
 
   /**
-   * 匹配正则（至少一种语言）
-   * 使用命名捕获组 (?<slotName>...) 提取槽位
+   * Match regex (at least one language)
+   * Uses named capture groups (?<slotName>...) to extract slots
    */
   match: RegExp;
 
   /**
-   * SpEL 模板字符串
-   * 使用 {slotName} 占位符引用捕获组
+   * SpEL template string
+   * Uses {slotName} placeholders to reference capture groups
    */
   spelTemplate: string;
 
   /**
-   * 槽位定义（捕获组映射到 SpEL 类型）
+   * Slot definitions (capture groups mapped to SpEL types)
    */
   slots: Record<string, SlotDefinition>;
 
-  /** 优先级 (0-100), 高优先级先匹配 */
+  /** Priority (0-100), higher priority matched first */
   priority: number;
 
-  /** 标签（用于分类和调试） */
+  /** Tags (for classification and debugging) */
   tags: string[];
 
-  /** 示例输入输出对 */
+  /** Example input/output pairs */
   examples: Array<{
     nl: string;
     spel: string;
   }>;
 
-  /** 难度等级 */
+  /** Difficulty level */
   difficulty: 'easy' | 'medium';
 
-  /** 置信度 (0-1) */
+  /** Confidence (0-1) */
   confidence: number;
 }
 
 export interface SlotDefinition {
-  /** 在 spelTemplate 中出现的键 */
+  /** Key appearing in spelTemplate */
   key: string;
-  /** SpEL 值类型: 'number' | 'string' | 'boolean' | 'variable' | 'literal' */
+  /** SpEL value type: 'number' | 'string' | 'boolean' | 'variable' | 'literal' */
   type: 'number' | 'string' | 'boolean' | 'variable' | 'literal';
-  /** 可选：值转换器 (e.g. 中文数字 → number) */
+  /** Optional: value transformer (e.g. Chinese numbers → number) */
   transform?: SlotTransform;
-  /** 可选：默认值 */
+  /** Optional: default value */
   defaultValue?: string;
 }
 

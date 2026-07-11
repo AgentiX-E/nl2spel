@@ -9,17 +9,17 @@ import type {
 } from '../SpelEvaluator.js';
 
 /**
- * ContextExtractor —— 从纯数据结构构建 ContextSchema。
+ * ContextExtractor — builds a ContextSchema from plain data structures.
  *
- * 与任何具体 SpEL 实现解耦，只接受：
- *   - rootObject: 任意对象（用于提取属性类型）
+ * Decoupled from any concrete SpEL implementation, accepts only:
+ *   - rootObject: any object (for extracting property types)
  *   - variables: Record<string, { type: string; value?: unknown }>
  *   - beans: string[]
  *   - types: string[]
  */
 export class ContextExtractor {
   /**
-   * 从纯数据结构提取 ContextSchema（不依赖 spel-ts）
+   * Extract ContextSchema from plain data structures (no spel-ts dependency)
    */
   public extract(context: {
     rootObject?: unknown;
@@ -49,7 +49,7 @@ export class ContextExtractor {
   }
 
   /**
-   * 提取根对象 Schema
+   * Extract root object schema
    */
   private extractRoot(context: {
     rootObject?: unknown;
@@ -70,7 +70,7 @@ export class ContextExtractor {
   }
 
   /**
-   * 提取对象字段
+   * Extract object fields
    */
   private extractFields(obj: Record<string, unknown>): Record<string, FieldSchema> {
     if (obj === null || obj === undefined || typeof obj !== 'object') {
@@ -93,7 +93,7 @@ export class ContextExtractor {
           example: this.safeExample(value),
         };
       } catch {
-        // 跳过无法访问的属性
+        // Skip inaccessible properties
       }
     }
 
@@ -101,7 +101,7 @@ export class ContextExtractor {
   }
 
   /**
-   * 推断 SpEL 类型
+   * Infer SpEL type
    */
   private inferSpelType(value: unknown): FieldSchema['type'] {
     if (value === null || value === undefined) return 'string';
@@ -115,14 +115,14 @@ export class ContextExtractor {
   }
 
   /**
-   * 生成字段描述
+   * Generate field description
    */
   private generateDescription(key: string, type: string): string {
     return `Field '${key}' of type ${type}`;
   }
 
   /**
-   * 安全获取示例值
+   * Safely get example value
    */
   private safeExample(value: unknown): unknown {
     if (value === null) return null;
@@ -131,7 +131,7 @@ export class ContextExtractor {
   }
 
   /**
-   * 提取变量
+   * Extract variables
    */
   private extractVariables(context: {
     variables?: Record<
@@ -154,7 +154,7 @@ export class ContextExtractor {
   }
 
   /**
-   * 提取 Bean
+   * Extract beans
    */
   private extractBeans(context: {
     beans?: Array<{ name: string; type: string; description?: string; singleton?: boolean }>;
@@ -173,7 +173,7 @@ export class ContextExtractor {
   }
 
   /**
-   * 提取类型
+   * Extract types
    */
   private extractTypes(context: {
     types?: Array<{ name: string; className?: string; description?: string }>;
@@ -191,7 +191,7 @@ export class ContextExtractor {
   }
 
   /**
-   * 提取函数
+   * Extract functions
    */
   private extractFunctions(context: {
     functions?: Array<{

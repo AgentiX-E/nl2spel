@@ -11,10 +11,10 @@ import type { ContextSchema, SpelEvaluator } from '../SpelEvaluator.js';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
 
 export interface GenerateOptions {
-  /** 上下文 Schema（可选） */
+  /** Context Schema (optional) */
   contextSchema?: ContextSchema;
 
-  /** 原始上下文对象（自动提取为 ContextSchema） */
+  /** Raw context object (auto-extracted to ContextSchema) */
   context?: {
     rootObject?: unknown;
     rootName?: string;
@@ -26,86 +26,86 @@ export interface GenerateOptions {
     types?: Array<{ name: string; className?: string; description?: string }>;
   };
 
-  /** 强制使用特定 LLM Provider */
+  /** Force using a specific LLM Provider */
   preferredProvider?: string;
 
-  /** 最小置信度阈值 (默认 0.5) */
+  /** Minimum confidence threshold (default 0.5) */
   minConfidence?: number;
 
-  /** 仅使用离线能力（Pattern + Template，不调用 LLM） */
+  /** Offline only (Pattern + Template, no LLM calls) */
   offlineOnly?: boolean;
 
-  /** 是否启用验证 (默认 true) */
+  /** Whether validation is enabled (default true) */
   enableValidation?: boolean;
 
-  /** 是否启用自纠正 (默认 true) */
+  /** Whether self-correction is enabled (default true) */
   enableSelfCorrection?: boolean;
 
-  /** 语言 (默认自动检测) */
+  /** Language (default auto-detect) */
   language?: 'zh' | 'en';
 
-  /** 是否返回调试信息 */
+  /** Whether to return debug information */
   debug?: boolean;
 }
 
 export interface GenerateResult {
-  /** 生成的 SpEL 表达式 */
+  /** Generated SpEL expression */
   expression: string;
 
-  /** 使用的策略 */
+  /** Strategy used */
   strategy: string;
 
-  /** 置信度 (0-1) */
+  /** Confidence (0-1) */
   confidence: number;
 
-  /** 生成耗时 (ms) */
+  /** Generation latency (ms) */
   latencyMs: number;
 
-  /** 调试信息（仅 debug=true 时返回） */
+  /** Debug info (only when debug=true) */
   debugInfo?: DebugInfo;
 }
 
 export interface DebugInfo {
-  /** Pattern 匹配结果 */
+  /** Pattern match result */
   patternMatch?: { matched: boolean; patternId?: string; spel?: string };
 
-  /** 意图分类结果 */
+  /** Intent classification result */
   intent?: { primary: string; complexity: number };
 
-  /** 模板生成结果 */
+  /** Template generation result */
   template?: { expression?: string; templateName?: string };
 
-  /** LLM Provider 信息 */
+  /** LLM Provider info */
   provider?: { name: string; model: string };
 
-  /** 自纠正信息 */
+  /** Self-correction info */
   corrections?: { attempts: number };
 }
 
 export interface ExplainResult {
-  /** 输入文本 */
+  /** Input text */
   input: string;
 
-  /** 使用的策略 */
+  /** Strategy used */
   strategy: string;
 
-  /** 意图信息 */
+  /** Intent information */
   intent: {
     primary: string;
     complexity: number;
     all: Array<{ intent: string; confidence: number }>;
   };
 
-  /** Pattern 是否命中 */
+  /** Whether pattern was matched */
   patternMatched: boolean;
 
-  /** 命中的 Pattern ID */
+  /** Matched Pattern ID */
   patternId?: string;
 
-  /** 最终表达式 */
+  /** Final expression */
   expression: string;
 
-  /** 所有可能的表达式（来自不同策略） */
+  /** All possible expressions (from different strategies) */
   alternatives: string[];
 }
 
@@ -119,36 +119,36 @@ export class NL2SpelEngine {
   }
 
   /**
-   * 注册 LLM Provider
+   * Register an LLM Provider
    */
   public registerProvider(provider: LLMProvider): void {
     this.providerRegistry.register(provider);
   }
 
   /**
-   * 注销 LLM Provider
+   * Unregister an LLM Provider
    */
   public unregisterProvider(name: string): void {
     this.providerRegistry.unregister(name);
   }
 
   /**
-   * 注册自定义 Pattern
+   * Register a custom Pattern
    */
   public registerPattern(pattern: PatternDefinition): void {
     this.router.getPatternMatcher().register(pattern);
   }
 
   /**
-   * 设置 SpelEvaluator（用于验证管道）
+   * Set SpelEvaluator for validation pipeline.
+   * Must be called before generate() if parse-level validation is required.
    */
   public setSpelEvaluator(evaluator: SpelEvaluator): void {
-    // Pass to validation pipeline through router internals — for now, we build a new pipeline
-    // The evaluator is used by ValidationPipeline in the router
+    this.router.setEvaluator(evaluator);
   }
 
   /**
-   * 从原始上下文对象提取 ContextSchema
+   * Extract ContextSchema from raw context object
    */
   public extractContextSchema(context: NonNullable<GenerateOptions['context']>): ContextSchema {
     const extractor = new ContextExtractor();
@@ -156,19 +156,19 @@ export class NL2SpelEngine {
   }
 
   /**
-   * 核心生成 API
+   * Core generation API
    */
   public async generate(nl: string, options: GenerateOptions = {}): Promise<GenerateResult> {
     const startTime = Date.now();
 
-    // 构建 ContextSchema
+    // Build ContextSchema
     let contextSchema = options.contextSchema;
     if (!contextSchema && options.context) {
       const extractor = new ContextExtractor();
       contextSchema = extractor.extract(options.context);
     }
 
-    // 离线模式
+    // Offline mode
     if (options.offlineOnly) {
       const patternMatcher = this.router.getPatternMatcher();
       const patternResult = patternMatcher.match(nl);
@@ -200,7 +200,7 @@ export class NL2SpelEngine {
       throw new Error('Cannot generate expression offline: no pattern or template matched.');
     }
 
-    // 路由生成
+    // Route generation
     const result = await this.router.generate(nl, contextSchema, options.preferredProvider);
 
     return {
@@ -212,7 +212,7 @@ export class NL2SpelEngine {
   }
 
   /**
-   * 批量生成
+   * Batch generation
    */
   public async generateBatch(
     nls: string[],
@@ -222,7 +222,7 @@ export class NL2SpelEngine {
   }
 
   /**
-   * 调试解释
+   * Debug explanation
    */
   public async explain(nl: string, options: GenerateOptions = {}): Promise<ExplainResult> {
     const classifier = new IntentClassifier();

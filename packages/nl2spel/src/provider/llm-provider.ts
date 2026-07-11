@@ -1,47 +1,47 @@
 import type { ContextSchema } from '../SpelEvaluator.js';
 
 // ============================================================
-// LLMProvider 接口
+// LLMProvider interface
 // ============================================================
 
 /**
- * LLMProvider 接口 —— NL2Spel 的 LLM 可插拔契约。
+ * LLMProvider interface — NL2Spel's pluggable LLM contract.
  *
- * 设计原则:
- * 1. 最小接口: 仅暴露 generate + generateStream + lifecycle
- * 2. 能力声明: capabilities 让 StrategyRouter 做路由决策
- * 3. 异步生命周期: 支持 WebLLM 等需要初始化/销毁的 Provider
- * 4. 流式支持: 可选 generateStream 用于渐进式生成
+ * Design principles:
+ * 1. Minimal interface: only exposes generate + generateStream + lifecycle
+ * 2. Capability declaration: capabilities let StrategyRouter make routing decisions
+ * 3. Async lifecycle: supports Providers that need init/dispose (e.g. WebLLM)
+ * 4. Stream support: optional generateStream for progressive generation
  */
 export interface LLMProvider {
-  /** Provider 唯一名称，用于日志/调试/Provider 选择 */
+  /** Provider unique name, used for logging/debugging/Provider selection */
   readonly name: string;
 
-  /** Provider 能力声明 */
+  /** Provider capability declaration */
   readonly capabilities: LLMCapabilities;
 
   /**
-   * 生成 SpEL 表达式（核心方法）
+   * Generate a SpEL expression (core method)
    */
   generate(prompt: LLMPrompt, options?: LLMGenerateOptions): Promise<LLMResponse>;
 
   /**
-   * 流式生成 SpEL 表达式（可选实现）
+   * Stream generate a SpEL expression (optional implementation)
    */
   generateStream?(prompt: LLMPrompt, options?: LLMGenerateOptions): AsyncIterable<LLMStreamChunk>;
 
   /**
-   * 检查 Provider 当前是否可用
+   * Check if the Provider is currently available
    */
   isAvailable(): Promise<boolean>;
 
   /**
-   * 初始化 Provider（可选）
+   * Initialize the Provider (optional)
    */
   initialize?(): Promise<void>;
 
   /**
-   * 释放 Provider 资源（可选）
+   * Release Provider resources (optional)
    */
   dispose?(): Promise<void>;
 }
@@ -51,120 +51,120 @@ export interface LLMProvider {
 // ============================================================
 
 /**
- * LLMProvider 的能力声明。
+ * LLMProvider capability declaration.
  */
 export interface LLMCapabilities {
-  /** 最大上下文窗口 (tokens) */
+  /** Maximum context window (tokens) */
   maxContextTokens: number;
 
-  /** 是否支持 Grammar Constraint（GBNF 等） */
+  /** Whether Grammar Constraint (GBNF, etc.) is supported */
   supportsGrammarConstraint: boolean;
 
-  /** 是否支持流式输出 */
+  /** Whether streaming output is supported */
   supportsStreaming: boolean;
 
-  /** 是否支持 Structured Output（JSON mode） */
+  /** Whether Structured Output (JSON mode) is supported */
   supportsStructuredOutput: boolean;
 
-  /** 是否可离线使用 */
+  /** Whether available offline */
   offlineAvailable: boolean;
 
   /**
-   * 单次请求估算成本（美元）
+   * Estimated cost per request (USD)
    */
   estimatedCostPerRequest?: number;
 
-  /** 估算延迟 (ms) */
+  /** Estimated latency (ms) */
   estimatedLatencyMs: number;
 }
 
 // ============================================================
-// LLM Prompt 类型
+// LLM Prompt types
 // ============================================================
 
 /**
- * 标准化的 LLM Prompt 结构。
+ * Standardized LLM Prompt structure.
  */
 export interface LLMPrompt {
-  /** 系统提示词 */
+  /** System prompt */
   system: string;
 
-  /** 用户输入 */
+  /** User input */
   user: string;
 
-  /** 上下文 Schema */
+  /** Context Schema */
   contextSchema: ContextSchema;
 
-  /** Few-Shot 示例列表 */
+  /** Few-Shot example list */
   examples: FewShotExample[];
 
-  /** 语法约束字符串（GBNF 格式） */
+  /** Grammar constraint string (GBNF format) */
   grammar?: string;
 }
 
 /**
- * Few-Shot 示例
+ * Few-Shot example
  */
 export interface FewShotExample {
-  /** 自然语言输入 */
+  /** Natural language input */
   nl: string;
-  /** 期望的 SpEL 表达式 */
+  /** Expected SpEL expression */
   spel: string;
-  /** 难度等级 */
+  /** Difficulty level */
   difficulty: 'easy' | 'medium' | 'hard';
-  /** 所属分类 */
+  /** Category */
   category: string;
 }
 
 /**
- * LLM 生成选项
+ * LLM generation options
  */
 export interface LLMGenerateOptions {
-  /** 温度 (0-2)，默认 0.1 */
+  /** Temperature (0-2), default 0.1 */
   temperature?: number;
 
-  /** 最大输出 tokens */
+  /** Maximum output tokens */
   maxTokens?: number;
 
-  /** Top-p 采样 */
+  /** Top-p sampling */
   topP?: number;
 
-  /** 停止序列 */
+  /** Stop sequences */
   stopSequences?: string[];
 
-  /** 是否启用 stream */
+  /** Whether to enable stream */
   stream?: boolean;
 
-  /** 自定义模型覆盖 */
+  /** Custom model override */
   model?: string;
 
-  /** 超时 (ms)，默认 30000 */
+  /** Timeout (ms), default 30000 */
   timeout?: number;
 
-  /** 最大重试次数 */
+  /** Maximum retry count */
   maxRetries?: number;
 }
 
 /**
- * LLM 生成响应
+ * LLM generation response
  */
 export interface LLMResponse {
-  /** 原始生成文本 */
+  /** Raw generated text */
   text: string;
 
-  /** 实际使用的模型 */
+  /** Actual model used */
   model: string;
 
-  /** Token 使用统计 */
+  /** Token usage statistics */
   usage: LLMUsage;
 
-  /** 生成耗时 (ms) */
+  /** Generation latency (ms) */
   latencyMs: number;
 
-  /** 完成原因 */
+  /** Finish reason */
   finishReason: 'stop' | 'length' | 'content_filter' | 'error';
 
-  /** Provider 名称 */
+  /** Provider name */
   providerName: string;
 }
 
@@ -172,21 +172,21 @@ export interface LLMResponse {
  * LLM Stream Chunk
  */
 export interface LLMStreamChunk {
-  /** 增量文本 */
+  /** Delta text */
   delta: string;
 
-  /** 累积文本 */
+  /** Accumulated text */
   accumulated: string;
 
-  /** 是否完成 */
+  /** Whether done */
   done: boolean;
 
-  /** 完成原因 */
+  /** Finish reason */
   finishReason?: string;
 }
 
 /**
- * Token 使用统计
+ * Token usage statistics
  */
 export interface LLMUsage {
   promptTokens: number;

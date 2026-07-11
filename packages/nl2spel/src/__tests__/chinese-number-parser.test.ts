@@ -107,5 +107,28 @@ describe('ChineseNumberParser', () => {
     it('两千 → 2000', () => {
       expect(ChineseNumberParser.parse('两千')).toBe(2000);
     });
+
+    it('两万 → 20000', () => {
+      expect(ChineseNumberParser.parse('两万')).toBe(20000);
+    });
+  });
+
+  // Tests for unit-only inputs (current=0 at <10000 units, section+current=0 at >=10000 units)
+  describe('unit-only start (covers || 1 fallback branches)', () => {
+    it('百 → 100 (current is 0, kLine 82 || 1)', () => {
+      expect(ChineseNumberParser.parse('百')).toBe(100);
+    });
+
+    it('千 → 1000 (current is 0, kLine 82 || 1)', () => {
+      expect(ChineseNumberParser.parse('千')).toBe(1000);
+    });
+
+    it('万 → 10000 (section+current is 0, kLine 77 || 1)', () => {
+      expect(ChineseNumberParser.parse('万')).toBe(10000);
+    });
+
+    it('亿 → 100000000 (section+current is 0, kLine 77 || 1)', () => {
+      expect(ChineseNumberParser.parse('亿')).toBe(100000000);
+    });
   });
 });

@@ -1,11 +1,11 @@
 /**
- * 中文数字解析器 —— 将中文数字字符串转换为阿拉伯数字。
+ * Chinese number parser — converts Chinese number strings to Arabic numerals.
  *
- * 支持:
- * - 基本数字: 零一二三四五六七八九十百千万亿
- * - "十" 开头: "十五" → 15
- * - 万/亿 分段: "一万二千三百四十五" → 12345
- * - "零" 占位: "一千零一" → 1001
+ * Supports:
+ * - Basic digits: 零一二三四五六七八九十百千万亿
+ * - Leading "十": "十五" → 15
+ * - Thousands/hundred-millions grouping: "一万二千三百四十五" → 12345
+ * - Zero padding: "一千零一" → 1001
  */
 export class ChineseNumberParser {
   private static readonly DIGITS: Record<string, number> = {
@@ -33,51 +33,52 @@ export class ChineseNumberParser {
   private static readonly CHINESE_NUM_PATTERN = /^[零一二三四五六七八九十百千万亿两]+$/;
 
   /**
-   * 检查字符串是否为纯中文数字
+   * Check if a string is pure Chinese numbers
    */
   public static isChineseNumber(text: string): boolean {
     return this.CHINESE_NUM_PATTERN.test(text);
   }
 
   /**
-   * 解析中文数字 → 阿拉伯数字
+   * Parse Chinese numbers → Arabic numerals
    *
-   * @param text 中文数字字符串
-   * @returns 解析后的数字，失败返回 NaN
+   * @param text Chinese number string
+   * @returns Parsed number, returns NaN on failure
    */
   public static parse(text: string): number {
     if (!this.isChineseNumber(text)) {
       return NaN;
     }
 
-    // 处理 "十" 开头 → "一十"
+    // Handle leading "十" → "一十"
     let s = text;
     if (s.startsWith('十')) {
       s = '一' + s;
     }
 
-    let result = 0; // 亿级及以上累积结果
-    let section = 0; // 万级分段
-    let current = 0; // 当前数字（千及以下）
+    let result = 0; // Accumulated result for hundreds-millions and above
+    let section = 0; // Ten-thousands segment
+    let current = 0; // Current digit (thousands and below)
 
     for (const ch of s) {
       const digit = this.DIGITS[ch];
       if (digit !== undefined) {
-        // 数字字符
+        // Digit character
         current = digit;
       } else {
         const unit = this.UNITS[ch];
         if (unit === undefined) continue;
 
         if (unit >= 10000) {
-          // 万/亿分段: section 已累计千以下值，加上当前数字后乘以单位
+          // Hundreds-millions/ten-thousands segment: section has accumulated values below
+          // plus current digit, multiply by unit
           // e.g. "十万" → section=10, current=0 → result += 10 * 10000 = 100000
           // e.g. "十二万" → section=10, current=2 → result += 12 * 10000 = 120000
           result += (section + current || 1) * unit;
           section = 0;
           current = 0;
         } else {
-          // 十/百/千
+          // Tens/hundreds/thousands
           section += (current || 1) * unit;
           current = 0;
         }
@@ -88,7 +89,7 @@ export class ChineseNumberParser {
   }
 
   /**
-   * 安全解析：如果解析失败返回 null
+   * Safe parse: returns null if parsing fails
    */
   public static parseSafe(text: string): number | null {
     const value = this.parse(text);

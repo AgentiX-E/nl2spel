@@ -11,10 +11,10 @@ import {
 import { PROVIDER_PRESETS, type ProviderPreset } from './provider-presets.js';
 
 export interface OpenAICompatibleConfig {
-  /** 预定义的 provider 名称 (openai/deepseek/glm/copilot/hunyuan/minimax/kimi) */
+  /** Predefined provider name (openai/deepseek/glm/copilot/hunyuan/minimax/kimi) */
   provider?: string;
 
-  /** 自定义配置（当 provider 为空或不存在时使用） */
+  /** Custom config (used when provider is empty or not found) */
   custom?: {
     name: string;
     baseURL: string;
@@ -23,16 +23,16 @@ export interface OpenAICompatibleConfig {
     maxContextTokens?: number;
   };
 
-  /** API Key（覆盖 preset 默认值） */
+  /** API key (overrides preset default) */
   apiKey?: string;
 
-  /** 模型名称（覆盖 preset 默认值） */
+  /** Model name (overrides preset default) */
   model?: string;
 
-  /** 最大上下文 tokens（覆盖 preset 默认值） */
+  /** Maximum context tokens (overrides preset default) */
   maxContextTokens?: number;
 
-  /** 自定义请求头 */
+  /** Custom request headers */
   headers?: Record<string, string>;
 }
 
@@ -269,14 +269,14 @@ export class OpenAICompatibleProvider implements LLMProvider {
   }
 
   /**
-   * 设置 promptBuilder（方便测试注入 mock）
+   * Set the PromptBuilder (convenient for injecting mocks in tests)
    */
   setPromptBuilder(builder: PromptBuilder): void {
     (this as any)._promptBuilder = builder;
   }
 
   /**
-   * 获取 promptBuilder
+   * Get the PromptBuilder
    */
   getPromptBuilder(): PromptBuilder {
     return this._promptBuilder;

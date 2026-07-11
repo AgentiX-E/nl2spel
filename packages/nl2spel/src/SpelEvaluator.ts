@@ -1,111 +1,111 @@
 /**
- * SpEL 求值器抽象接口
+ * SpEL evaluator abstract interface
  *
- * nl2spel 核心包通过此接口进行：
- *   1. 语法验证（Parse Check）
- *   2. 类型验证（Type Check）
- *   3. 上下文验证（Context Check）
- *   4. 表达式求值（用于语义验证）
+ * The nl2spel core package uses this interface for:
+ *   1. Syntax validation (Parse Check)
+ *   2. Type validation (Type Check)
+ *   3. Context validation (Context Check)
+ *   4. Expression evaluation (for semantic validation)
  *
- * nl2spel 本身不实现此接口，也不依赖任何具体实现。
- * 用户注入 spel-ts Adapter 或远程 API Adapter 或 mock。
+ * nl2spel does not implement this interface, nor does it depend on any concrete implementation.
+ * Users inject a spel-ts Adapter, remote API Adapter, or mock.
  */
 export interface SpelEvaluator {
   /**
-   * 解析 SpEL 表达式并返回语法验证结果。
-   * 对于语法错误的表达式，errors 数组非空。
+   * Parse a SpEL expression and return syntax validation results.
+   * For syntactically invalid expressions, the errors array is non-empty.
    */
   parse(expression: string): ParseResult | Promise<ParseResult>;
 
   /**
-   * 获取可用的上下文 Schema。
-   * 返回 null 表示无上下文信息可用（仅语法验证，不做类型/上下文验证）。
+   * Get the available context schema.
+   * Returns null if no context information is available (syntax-only validation, no type/context check).
    */
   getContextSchema(): ContextSchema | null | Promise<ContextSchema | null>;
 
   /**
-   * 求值表达式（可选）。
-   * 用于语义验证：用测试输入验证生成的表达式是否产生预期结果。
-   * 不需要语义验证的场景可以不实现。
+   * Evaluate an expression (optional).
+   * Used for semantic validation: verify the generated expression produces expected results with test inputs.
+   * Can be left unimplemented if semantic validation is not needed.
    */
   evaluate?(expression: string, context: Record<string, unknown>): unknown | Promise<unknown>;
 }
 
-/** 解析结果 */
+/** Parse result */
 export interface ParseResult {
   valid: boolean;
   errors: ParseError[];
-  /** 解析成功时的 AST 表示（可选） */
+  /** AST representation on successful parse (optional) */
   ast?: unknown;
 }
 
 export interface ParseError {
   message: string;
   position: number;
-  /** 错误类型（可选，用于分类处理） */
+  /** Error type (optional, for classification) */
   code?: string;
 }
 
 /**
- * 上下文 Schema —— 描述 SpEL 求值上下文的元数据。
+ * Context Schema — describes metadata of the SpEL evaluation context.
  *
- * 用于：
- * 1. PromptBuilder: 构造 LLM Prompt 中的上下文信息
- * 2. ValidationPipeline: 验证表达式中的引用是否合法
- * 3. TemplateEngine: 槽位填充时匹配正确的字段名
- * 4. GBNFGenerator: 生成包含所有合法标识符的 GBNF 语法
+ * Used for:
+ * 1. PromptBuilder: constructing context information in LLM prompts
+ * 2. ValidationPipeline: verifying expression references are valid
+ * 3. TemplateEngine: matching correct field names during slot filling
+ * 4. GBNFGenerator: generating GBNF grammar containing all valid identifiers
  */
 export interface ContextSchema {
-  /** 根对象元信息 */
+  /** Root object metadata */
   root: RootObjectSchema | null;
 
-  /** 变量声明 */
+  /** Variable declarations */
   variables: Record<string, VariableSchema>;
 
-  /** Bean 声明 */
+  /** Bean declarations */
   beans: Record<string, BeanSchema>;
 
-  /** 类型声明 */
+  /** Type declarations */
   types: Record<string, TypeSchema>;
 
-  /** 函数声明 */
+  /** Function declarations */
   functions: Record<string, FunctionSchema>;
 }
 
 export interface RootObjectSchema {
-  /** 根对象名称 (在 SpEL 中作为 #rootName 引用) */
+  /** Root object name (referenced as #rootName in SpEL) */
   name: string;
 
-  /** 根对象类型 */
+  /** Root object type */
   type: string;
 
-  /** 根对象的字段 */
+  /** Root object fields */
   fields: Record<string, FieldSchema>;
 
-  /** 根对象的方法 */
+  /** Root object methods */
   methods: Record<string, MethodSchema>;
 }
 
 export interface FieldSchema {
-  /** SpEL 类型 */
+  /** SpEL type */
   type: 'string' | 'number' | 'boolean' | 'date' | 'object' | 'array' | 'map';
 
-  /** 字段描述（中文，用于语义匹配） */
+  /** Field description (for semantic matching) */
   description?: string;
 
-  /** 子字段 (如 type 为 object) */
+  /** Child fields (if type is object) */
   fields?: Record<string, FieldSchema>;
 
-  /** 是否为集合 */
+  /** Whether it is a collection */
   isCollection?: boolean;
 
-  /** 集合元素类型 */
+  /** Collection element type */
   elementType?: string;
 
-  /** 是否可为 null */
+  /** Whether nullable */
   nullable?: boolean;
 
-  /** 示例值 */
+  /** Example value */
   example?: unknown;
 }
 

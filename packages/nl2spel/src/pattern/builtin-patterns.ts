@@ -1,17 +1,17 @@
 import type { PatternDefinition } from './pattern-definition.js';
 
 /**
- * 内置模式库 — 覆盖 ≥80% Easy 场景，≥35 个 PatternDefinition。
+ * Built-in pattern library — covers ≥80% Easy scenarios, ≥35 PatternDefinitions.
  *
- * 核心设计：
- * 1. 所有模式使用具名捕获组 `(?<field>…)` 或 `(?<value>…)` 提取参数
- * 2. 中英文独立模式（不混用关键词，避免跨语言误匹配）
- * 3. 高特异性模式高优先级（"不为空" > "不"）
- * 4. 按 priority 降序排列
+ * Core design:
+ * 1. All patterns use named capture groups `(?<field>…)` or `(?<value>…)` to extract parameters
+ * 2. Separate Chinese/English patterns (don't mix keywords, avoids cross-language false matches)
+ * 3. High-specificity patterns have higher priority ("not empty" > "not")
+ * 4. Sorted by priority descending
  */
 export const BUILTIN_PATTERNS: PatternDefinition[] = [
   // ================================================================
-  // P93+: 纯英文数值比较（覆盖 "amount > 500" 等）
+  // P93+: Pure English numeric comparison (covers "amount > 500" etc.)
   // ================================================================
 
   {
@@ -63,7 +63,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 1: Null / Empty — pri 97-96 (最高特异性)
+  // Group 1: Null / Empty — pri 97-96 (highest specificity)
   // ================================================================
 
   {
@@ -112,7 +112,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 2: 中文数值比较 — pri 92
+  // Group 2: Chinese numeric comparison — pri 92
   // ================================================================
 
   {
@@ -142,7 +142,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   {
     id: 'CN-CMP-GT',
     match:
-      /^(?<field>[^\s，,、]+?)\s*(?:金额|值|数量|价格)?\s*(?:大于|超过|高于|大于等于)\s*(?<value>\d+(?:\.\d+)?)/,
+      /^(?<field>[^\s，,、]+?)\s*(?:金额|值|数量|价格)?\s*(?:大于|超过|高于)\s*(?<value>\d+(?:\.\d+)?)/,
     spelTemplate: '#{field} > {value}',
     slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
     priority: 92,
@@ -165,7 +165,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 3: 字符串/状态 相等 — pri 91
+  // Group 3: String/status equality — pri 91
   // ================================================================
 
   {
@@ -191,7 +191,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     confidence: 0.95,
   },
 
-  // CN: "订单状态不是已取消" —— 需在 NOT 模式之前
+  // CN: "order status is not cancelled" — must be before NOT pattern
   {
     id: 'CN-NE-STATUS',
     match: /^(?<field>[^\s，,、]+?)\s*(?:状态|类型)?\s*(?:不等于|!=|不是)\s*(?<value>[^\s，,、]+)$/,
@@ -215,7 +215,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     confidence: 0.95,
   },
 
-  // CN/EN: 数量等于
+  // CN/EN: count equality
   {
     id: 'CN-EQ-COUNT',
     match: /^(?<field>[^\s，,、]+?)\s*(?:数量|个数|计数)?\s*(?:等于|==)\s*(?<value>\d+)/,
@@ -240,7 +240,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 4: 权限检查 — pri 88
+  // Group 4: Permission checks — pri 88
   // ================================================================
 
   {
@@ -289,7 +289,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 5: 集合操作 — pri 85-89
+  // Group 5: Collection operations — pri 85-89
   // ================================================================
 
   {
@@ -391,7 +391,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 6: 字符串操作 — pri 82-85
+  // Group 6: String operations — pri 82-85
   // ================================================================
 
   {
@@ -485,7 +485,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 7: 范围 — pri 82
+  // Group 7: Range — pri 82
   // ================================================================
 
   {
@@ -546,7 +546,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 9: 日期 — pri 75
+  // Group 9: Date — pri 75
   // ================================================================
 
   {
@@ -609,7 +609,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 10: 类型检查 — pri 73
+  // Group 10: Type check — pri 73
   // ================================================================
 
   {
@@ -697,7 +697,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 12: 逻辑组合 — pri 63-65
+  // Group 12: Logical combination — pri 63-65
   // ================================================================
 
   {
@@ -760,7 +760,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 13: 逻辑 NOT — pri 61-62
+  // Group 13: Logical NOT — pri 61-62
   // ================================================================
 
   {
@@ -787,7 +787,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 14: 投影与选择 — pri 55-60
+  // Group 14: Projection & selection — pri 55-60
   // ================================================================
 
   {
@@ -854,5 +854,5 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 ];
 
-// 按优先级降序排列
+// Sort by priority descending
 BUILTIN_PATTERNS.sort((a, b) => b.priority - a.priority);

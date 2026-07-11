@@ -9,7 +9,7 @@ function createMatcher(extraPatterns: PatternDefinition[] = []) {
 
 describe('PatternMatcher', () => {
   // ================================================================
-  // PT-G01: 比较操作 (Comparison) — 20 tests
+  // PT-G01: Comparison — 20 tests
   // ================================================================
   describe('PT-G01: Comparison', () => {
     describe('gt — greater than', () => {
@@ -149,7 +149,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G02: Null 检查 — 8 tests
+  // PT-G02: Null Checks — 8 tests
   // ================================================================
   describe('PT-G02: Null Checks', () => {
     it('备注为空', () => {
@@ -202,7 +202,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G03: 权限检查 — 6 tests
+  // PT-G03: Permission Checks — 6 tests
   // ================================================================
   describe('PT-G03: Permission Checks', () => {
     it('用户是管理员', () => {
@@ -243,7 +243,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G04: 逻辑组合 — 6 tests
+  // PT-G04: Logical Combinations — 6 tests
   // ================================================================
   describe('PT-G04: Logical Combinations', () => {
     it('VIP or amount > 1000', () => {
@@ -285,7 +285,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G05: 字符串操作 — 12 tests
+  // PT-G05: String Operations — 12 tests
   // ================================================================
   describe('PT-G05: String Operations', () => {
     it('订单备注包含加急', () => {
@@ -368,7 +368,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G06: 集合操作 — 12 tests
+  // PT-G06: Collection Operations — 12 tests
   // ================================================================
   describe('PT-G06: Collection Operations', () => {
     it('标签列表中包含VIP', () => {
@@ -445,7 +445,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G07: 范围检查 — 8 tests
+  // PT-G07: Range Checks — 8 tests
   // ================================================================
   describe('PT-G07: Range Checks', () => {
     it('年龄在18到60之间', () => {
@@ -498,7 +498,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G08: Elvis 默认值 — 3 tests
+  // PT-G08: Elvis Default Values — 3 tests
   // ================================================================
   describe('PT-G08: Elvis Default Values', () => {
     it('用户名或者匿名用户', () => {
@@ -521,7 +521,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G09: 类型检查 — 2 tests
+  // PT-G09: Type Check — 2 tests
   // ================================================================
   describe('PT-G09: Type Check', () => {
     it('account is Admin', () => {
@@ -538,7 +538,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G10: Boolean 属性 — 6 tests
+  // PT-G10: Boolean Properties — 6 tests
   // ================================================================
   describe('PT-G10: Boolean Properties', () => {
     it('isVIP is true', () => {
@@ -579,7 +579,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G11: 日期时间 — 4 tests
+  // PT-G11: Date/Time — 4 tests
   // ================================================================
   describe('PT-G11: Date/Time', () => {
     it('创建日期在2024-01-01之后', () => {
@@ -608,7 +608,7 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G12: 投影与选择 — 3 tests
+  // PT-G12: Projection & Selection — 3 tests
   // ================================================================
   describe('PT-G12: Projection & Selection', () => {
     it('订单中第一个金额大于1000的', () => {
@@ -632,11 +632,11 @@ describe('PatternMatcher', () => {
   });
 
   // ================================================================
-  // PT-G13: 中文数字 — tested via ChineseNumberParser.test.ts
+  // PT-G13: Chinese Numbers — tested via ChineseNumberParser.test.ts
   // ================================================================
 
   // ================================================================
-  // PT-G14: 边界与误匹配 — 10 tests
+  // PT-G14: Edge Cases & Non-Match — 10 tests
   // ================================================================
   describe('PT-G14: Edge Cases & Non-Match', () => {
     it('should not match empty input', () => {
@@ -730,6 +730,94 @@ describe('PatternMatcher', () => {
         // Key is: they do not throw
         expect(() => m.match(c)).not.toThrow();
       }
+    });
+
+    it('registerAll with empty array should not crash', () => {
+      const m = createMatcher();
+      const before = m.patternCount;
+      m.registerAll([]);
+      expect(m.patternCount).toBe(before);
+    });
+  });
+
+  // ================================================================
+  // PT-G15: Operator replacement in {op} placeholder
+  // ================================================================
+  describe('PT-G15: Operator placeholder {op}', () => {
+    it('should replace {op} with >= when input contains >=', () => {
+      const m = createMatcher();
+      m.register({
+        id: 'COLL-SIZE-GTE',
+        match: /(?<field>\w+)\s+size\s*>=\s*(?<value>\d+)/i,
+        spelTemplate: '#{field}.size() {op} {value}',
+        slots: {
+          field: { key: 'field', type: 'string' },
+          value: { key: 'value', type: 'number', transform: 'toNumber' },
+        },
+        priority: 80,
+        tags: ['collection', 'comparison'],
+        examples: [],
+        difficulty: 'easy',
+        confidence: 0.9,
+      });
+      const r = m.match('items size >= 5');
+      expect(r.matched).toBe(true);
+      expect(r.spel).toBe('#items.size() >= 5');
+    });
+
+    it('should replace {op} with <= when input contains <=', () => {
+      const m = createMatcher();
+      m.register({
+        id: 'COLL-SIZE-LTE',
+        match: /(?<field>\w+)\s+size\s*<=\s*(?<value>\d+)/i,
+        spelTemplate: '#{field}.size() {op} {value}',
+        slots: {
+          field: { key: 'field', type: 'string' },
+          value: { key: 'value', type: 'number', transform: 'toNumber' },
+        },
+        priority: 80,
+        tags: ['collection', 'comparison'],
+        examples: [],
+        difficulty: 'easy',
+        confidence: 0.9,
+      });
+      const r = m.match('items size <= 5');
+      expect(r.matched).toBe(true);
+      expect(r.spel).toBe('#items.size() <= 5');
+    });
+  });
+
+  // ================================================================
+  // PT-G16: Chinese field fallback and root inference
+  // ================================================================
+  describe('PT-G16: Chinese field fallback and root inference', () => {
+    it('should use original Chinese word as field when not in cnMap', () => {
+      const m = createMatcher();
+      // "折扣" is not in the cnMap, so extractChineseField returns "折扣" as-is
+      const r = m.match('折扣大于50');
+      expect(r.matched).toBe(true);
+      expect(r.spel).toBe('#折扣 > 50');
+    });
+
+    it('should default root to order when no known root keyword is found', () => {
+      const m = createMatcher();
+      m.register({
+        id: 'DEFAULT-ROOT-TEST',
+        match: /测试\s*(?<value>\d+)/,
+        spelTemplate: '#{root}.{field} > {value}',
+        slots: {
+          value: { key: 'value', type: 'number', transform: 'toNumber' },
+        },
+        priority: 100,
+        tags: ['test'],
+        examples: [],
+        difficulty: 'easy',
+        confidence: 0.95,
+      });
+      // "测试" doesn't match any root keyword → inferRoot returns 'order'
+      const r = m.match('测试 42');
+      expect(r.matched).toBe(true);
+      expect(r.spel).toContain('#order');
     });
   });
 

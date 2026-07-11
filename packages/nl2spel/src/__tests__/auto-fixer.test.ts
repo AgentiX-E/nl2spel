@@ -175,4 +175,146 @@ describe('AutoFixer', () => {
       expect(result.wasFixed).toBe(false);
     });
   });
+
+  // ===== Additional Coverage Tests =====
+  describe('Additional Coverage', () => {
+    it('!== undefined → != null (without === undefined)', () => {
+      const result = fixer.fix('#x !== undefined or #y != null');
+      expect(result.wasFixed).toBe(true);
+      expect(result.expression).toContain('!= null');
+      expect(result.expression).not.toContain('!==');
+      expect(result.expression).not.toContain('!== undefined');
+    });
+
+    it('should fix odd number of double quotes', () => {
+      const result = fixer.fix('#order.status == "pending');
+      expect(result.wasFixed).toBe(true);
+      expect(result.expression).toBe('#order.status == "pending"');
+      expect(result.changes).toContain('Added missing closing double quote');
+    });
+
+    it('> == → >= edge case (assertive)', () => {
+      const result = fixer.fix('#x > == 5');
+      expect(result.wasFixed).toBe(true);
+      expect(result.expression).toContain('>=');
+      expect(result.expression).not.toContain('> ==');
+      expect(result.changes).toContain('Replaced > == with >=');
+    });
+
+    it('< == → <= edge case (assertive)', () => {
+      const result = fixer.fix('#x < == 5');
+      expect(result.wasFixed).toBe(true);
+      expect(result.expression).toContain('<=');
+      expect(result.expression).not.toContain('< ==');
+      expect(result.changes).toContain('Replaced < == with <=');
+    });
+
+    it('Elvis operator spacing fix ? : → ?:', () => {
+      const result = fixer.fix("#x ? : 'default'");
+      expect(result.wasFixed).toBe(true);
+      expect(result.expression).toContain('?:');
+      expect(result.changes).toContain('Fixed Elvis operator spacing');
+    });
+
+    it('should fix curly brace imbalance', () => {
+      const result = fixer.fix('{a: {b: 1}');
+      expect(result.wasFixed).toBe(true);
+      // The fixer adds closing braces at the end
+      expect(result.expression).toBe('{a: {b: 1}}');
+    });
+
+    it('empty string input (no-op)', () => {
+      const result = fixer.fix('');
+      expect(result.wasFixed).toBe(false);
+      expect(result.changes).toHaveLength(0);
+      expect(result.expression).toBe('');
+    });
+
+    it('expression with NO changes needed but wasFixed returns false', () => {
+      const result = fixer.fix('#x > 0');
+      expect(result.wasFixed).toBe(false);
+      expect(result.changes).toHaveLength(0);
+      expect(result.expression).toBe('#x > 0');
+    });
+
+    it('all fixes combined in one expression', () => {
+      const result = fixer.fix('#x === undefined && #y !== undefined || #z > == 5');
+      expect(result.wasFixed).toBe(true);
+      expect(result.expression).not.toContain('===');
+      expect(result.expression).not.toContain('!==');
+      expect(result.expression).toContain('== null');
+      expect(result.expression).toContain('!= null');
+      expect(result.expression).toContain('and');
+      expect(result.expression).toContain('or');
+      expect(result.expression).toContain('>=');
+      expect(result.changes.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('fixAllBrackets with curly braces specific case', () => {
+      const result = fixer.fix('{#a, #b');
+      expect(result.wasFixed).toBe(true);
+      // The expression starts with { but has no closing }
+      expect(result.expression).toContain('}');
+      expect(result.changes).toContain('Fixed unbalanced brackets');
+    });
+  });
+
+  // ===== Branch coverage: lines 23, 30, 37, 44 =====
+  describe('Branch coverage', () => {
+    // Line 23: !== undefined but NOT === undefined, with other !== surviving
+    // Step 1b converts !== undefined → != null, then step 2 finds remaining !==
+    it('!== undefined with other !== surviving the undefined check (line 23)', () => {
+      const result = fixer.fix('#x !== undefined && #y !== 5');
+      expect(result.wasFixed).toBe(true);
+      // Step 1b: !== undefined → != null
+      // Step 2: !== 5 → != 5 (line 23 body)
+      expect(result.expression).toContain('!= null');
+      expect(result.expression).toContain('!= 5');
+      expect(result.expression).not.toContain('!==');
+      expect(result.expression).not.toContain('!== undefined');
+      expect(result.changes).toContain('Replaced !== undefined with != null');
+      expect(result.changes).toContain('Replaced 1x !== with !=');
+    });
+
+    // Lines 23 + 30: !== AND === past the undefined checks
+    // Step 2 fires for !==, then step 3 fires for ===
+    it('!== and === past undefined checks (lines 23 + 30)', () => {
+      const result = fixer.fix('#x !== 5 && #y === 0');
+      expect(result.wasFixed).toBe(true);
+      expect(result.expression).toContain('!= 5');
+      expect(result.expression).toContain('== 0');
+      expect(result.expression).not.toContain('!==');
+      expect(result.expression).not.toContain('===');
+      expect(result.changes).toContain('Replaced 1x !== with !=');
+      expect(result.changes).toContain('Replaced 1x === with ==');
+    });
+
+    // Line 37: no && in expression → skip the && → and replacement
+    it('no && in expression (line 37 false branch)', () => {
+      const result = fixer.fix('#x === 5 || #y > 0');
+      expect(result.wasFixed).toBe(true);
+      // Step 3: === → ==
+      // Step 4: includes('&&') → false → skip line 37
+      // Step 5: includes('||') → true → line 44 body
+      expect(result.expression).not.toContain('===');
+      expect(result.expression).not.toContain('&&');
+      expect(result.expression).toContain('or');
+      expect(result.changes).toContain('Replaced 1x === with ==');
+      expect(result.changes).toContain('Replaced 1x || with or');
+    });
+
+    // Line 44: no || in expression → skip the || → or replacement
+    it('no || in expression (line 44 false branch)', () => {
+      const result = fixer.fix('#x === 5 && #y > 0');
+      expect(result.wasFixed).toBe(true);
+      // Step 3: === → ==
+      // Step 4: includes('&&') → true → line 37 body
+      // Step 5: includes('||') → false → skip line 44
+      expect(result.expression).not.toContain('===');
+      expect(result.expression).toContain('and');
+      expect(result.expression).not.toContain('||');
+      expect(result.changes).toContain('Replaced 1x === with ==');
+      expect(result.changes).toContain('Replaced 1x && with and');
+    });
+  });
 });

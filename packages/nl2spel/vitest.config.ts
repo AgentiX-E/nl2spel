@@ -9,7 +9,18 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'src/__tests__/**'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.spec.ts',
+        'src/__tests__/**',
+        // Types-only files (no executable code)
+        'src/SpelEvaluator.ts',
+        'src/index.ts',
+        'src/provider/llm-provider.ts',
+        'src/pattern/pattern-definition.ts',
+        // Vendored/auto-generated
+        'src/strategy/strategies/**',
+      ],
     },
   },
 });

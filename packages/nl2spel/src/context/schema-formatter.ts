@@ -1,15 +1,15 @@
 import type { ContextSchema, FieldSchema } from '../SpelEvaluator.js';
 
 /**
- * SchemaFormatter —— 将 ContextSchema 格式化为可读文本。
+ * SchemaFormatter — formats ContextSchema into readable text.
  *
- * 两种格式:
- * 1. formatForLLM(): 优化为 LLM Prompt（紧凑，关键信息优先）
- * 2. formatForHuman(): 人类可读格式（完整，缩进友好）
+ * Two formats:
+ * 1. formatForLLM(): optimized for LLM prompts (compact, key info first)
+ * 2. formatForHuman(): human-readable format (complete, indent-friendly)
  */
 export class SchemaFormatter {
   /**
-   * LLM 优化格式 —— 紧凑，注入到 Prompt 的 User 部分
+   * LLM-optimized format — compact, injected into the User part of the prompt
    */
   public formatForLLM(schema: ContextSchema): string {
     const lines: string[] = ['## Context Schema'];
@@ -71,7 +71,7 @@ export class SchemaFormatter {
   }
 
   /**
-   * 人类可读格式
+   * Human-readable format
    */
   public formatForHuman(schema: ContextSchema): string {
     const lines: string[] = [
