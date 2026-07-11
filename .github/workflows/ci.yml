@@ -64,6 +64,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Build core package (required for dependent packages)
+        run: pnpm --filter @agentix-e/nl2spel build
+
       - name: Run tests with coverage
         run: |
           pnpm -r run test -- --coverage --reporter=verbose
