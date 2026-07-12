@@ -261,8 +261,8 @@ export class PromptBuilder {
         ? FEWSHOT_EXAMPLES
         : FEWSHOT_EXAMPLES.filter(
             e =>
-              // Include all English-leaning examples
-              e.nl === e.nl.toLowerCase() ||
+              // Include all English examples (CJK characters indicate non-English)
+              !/[\u4e00-\u9fff\u3400-\u4dbf]/.test(e.nl) ||
               e.category === 'comparison' ||
               e.category === 'logical',
           );

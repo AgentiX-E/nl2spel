@@ -2,7 +2,7 @@
 
 > Natural Language → SpEL Core Engine
 >
-> Zero external deps · Four-layer hybrid architecture · 502 tests · Chinese & English
+> Zero external deps · Four-layer hybrid architecture · 527 tests · Chinese & English
 
 [![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel)](https://www.npmjs.com/package/@agentix-e/nl2spel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
@@ -18,7 +18,7 @@ Full API documentation → [nl2spel API](https://agentix-e.github.io/nl2spel/api
 ```typescript
 import {
   NL2SpelEngine,        // Main engine
-  PatternMatcher,       // Layer 0: Pattern matching (35+ built-in patterns)
+  PatternMatcher,       // Layer 0: Pattern matching (48+ built-in patterns)
   IntentClassifier,     // Layer 1: Intent classification (15 NLIntent types)
   TemplateEngine,       // Layer 1: Template filling (15 template categories)
   PromptBuilder,        // Layer 2: LLM Prompt construction

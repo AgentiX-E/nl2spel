@@ -91,7 +91,6 @@ export class AutoFixer {
 
     const wasFixed = changes.length > 0;
     return {
-      fixed: wasFixed ? fixed : expression,
       wasFixed,
       expression: wasFixed ? fixed : expression,
       changes,
@@ -128,6 +127,5 @@ export class AutoFixer {
 export interface AutoFixResult {
   expression: string;
   wasFixed: boolean;
-  fixed: string;
   changes: string[];
 }

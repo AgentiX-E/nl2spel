@@ -95,18 +95,18 @@ export class SelfCorrectionLoop {
       if (autoFixResult.wasFixed) {
         currentExpression = autoFixResult.expression;
 
+        // Validate AutoFix result
+        const afterFix = await this.pipeline.validate(currentExpression, contextSchema);
+
         corrections.push({
           attempt: 0,
           expression: currentExpression,
-          valid: false,
-          errorCount: initialResult.errors.length,
-          warningCount: initialResult.warnings.length,
+          valid: afterFix.valid,
+          errorCount: afterFix.errors.length,
+          warningCount: afterFix.warnings.length,
           autoFixed: true,
           autoFixChanges: autoFixResult.changes,
         });
-
-        // Validate AutoFix result
-        const afterFix = await this.pipeline.validate(currentExpression, contextSchema);
 
         if (afterFix.valid) {
           return {
@@ -120,15 +120,6 @@ export class SelfCorrectionLoop {
         }
 
         // AutoFix not sufficient, continue to LLM correction
-        corrections.push({
-          attempt: 0,
-          expression: currentExpression,
-          valid: afterFix.valid,
-          errorCount: afterFix.errors.length,
-          warningCount: afterFix.warnings.length,
-          autoFixed: false,
-          autoFixChanges: [],
-        });
       }
     }
 

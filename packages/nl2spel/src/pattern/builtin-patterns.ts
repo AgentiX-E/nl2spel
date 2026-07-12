@@ -112,7 +112,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
 
   // ================================================================
-  // Group 2: Chinese numeric comparison — pri 92
+  // Group 2: Chinese numeric comparison — pri 93
   // ================================================================
 
   {

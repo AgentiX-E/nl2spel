@@ -145,10 +145,11 @@ export class WebLLMProvider implements LLMProvider {
       { role: 'user' as const, content: prompt.user },
     ];
 
-    // Generate GBNF grammar constraint
-    if (this.config.enableGrammar) {
-      this.gbnfGenerator.generate(prompt.contextSchema);
-    }
+    // GBNF grammar generation is available via GBNFGenerator for manual use.
+    // Auto-injection into WebLLM requests is not yet supported by @mlc-ai/web-llm.
+    // if (this.config.enableGrammar) {
+    //   this.gbnfGenerator.generate(prompt.contextSchema);
+    // }
 
     try {
       const completion = await engine.chat.completions.create({

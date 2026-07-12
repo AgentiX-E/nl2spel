@@ -2,7 +2,7 @@
 
 ## Branch Strategy
 
-- `main` — Stable branch, target for all PR merges
+- `master` — Stable branch, target for all PR merges
 - `feat/*` — Feature development branches
 - `fix/*` — Bug fix branches
 - `docs/*` — Documentation update branches
@@ -88,7 +88,7 @@ packages/
 
 1. Update `CHANGELOG.md`
 2. Update version numbers (`packages/*/package.json`)
-3. Submit PR to `main`
+3. Submit PR to `master`
 4. Merge after CI passes
 5. Manually trigger `npm-publish` workflow to release
 
