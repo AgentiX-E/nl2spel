@@ -214,7 +214,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     permissions:
-      contents: write
+      contents: read
       pages: write
       id-token: write
 
@@ -513,37 +513,12 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        continue-on-error: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
-      - name: Deploy to GitHub Pages (workflow)
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        continue-on-error: true
-
-      - name: Push to gh-pages branch (fallback)
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
-          publish_branch: gh-pages
-          force_orphan: true
-          enable_jekyll: false
-
-      - name: Deployment summary
-        if: always()
-        run: |
-          if [ "${{ steps.deployment.outcome }}" = "success" ]; then
-            echo "✅ Pages deployed via workflow: ${{ steps.deployment.outputs.page_url }}"
-          else
-            echo "⚠️  Workflow deployment skipped (Pages may need manual setup)."
-            echo "📦 Content pushed to gh-pages branch as fallback."
-            echo "🌐 Expected URL: https://agentix-e.github.io/nl2spel/"
-            echo ""
-            echo "📋 If the site is not live, enable Pages in repo settings:"
-            echo "   Settings → Pages → Source: 'Deploy from a branch' → Branch: 'gh-pages' → Save"
-          fi
