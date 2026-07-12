@@ -39,8 +39,8 @@ importers:
   packages/nl2spel:
     devDependencies:
       '@agentix-e/spel-ts':
-        specifier: github:AgentiX-E/spel-ts#feat/language-service
-        version: https://codeload.github.com/AgentiX-E/spel-ts/tar.gz/e0b42d03250674d194a53a04e291507599060ebd
+        specifier: ^1.1.0
+        version: 1.1.0
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -85,9 +85,8 @@ importers:
 
 packages:
 
-  '@agentix-e/spel-ts@https://codeload.github.com/AgentiX-E/spel-ts/tar.gz/e0b42d03250674d194a53a04e291507599060ebd':
-    resolution: {tarball: https://codeload.github.com/AgentiX-E/spel-ts/tar.gz/e0b42d03250674d194a53a04e291507599060ebd}
-    version: 1.0.1
+  '@agentix-e/spel-ts@1.1.0':
+    resolution: {integrity: sha512-Defy8oekvloU+vf+xD7DLlbe0yDOI9hubtWm4Uk9pH63O0Sk5KWf7UeRtLMVewCWOCy1xMeNFov2GkW9CFQ6WA==}
 
   '@ai-sdk/openai@1.3.24':
     resolution: {integrity: sha512-GYXnGJTHRTZc4gJMSmFRgEQudjqd4PUN0ZjQhPwOAYH1yOAvQoG/Ikqs+HyISRbLPCrhbZnPKCNHuRU4OfpW0Q==}
@@ -1023,7 +1022,7 @@ packages:
 
 snapshots:
 
-  '@agentix-e/spel-ts@https://codeload.github.com/AgentiX-E/spel-ts/tar.gz/e0b42d03250674d194a53a04e291507599060ebd': {}
+  '@agentix-e/spel-ts@1.1.0': {}
 
   '@ai-sdk/openai@1.3.24(zod@3.25.76)':
     dependencies:
