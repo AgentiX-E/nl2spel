@@ -1,6 +1,6 @@
 import { NLIntent } from './nl-intent.js';
 import type { IntentResult } from './intent-classifier.js';
-import type { ContextSchema } from '../SpelEvaluator.js';
+import type { ContextSchema } from '@agentix-e/spel-ts';
 
 export interface TemplateResult {
   /** Generated SpEL expression */

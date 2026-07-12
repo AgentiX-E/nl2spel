@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { TemplateEngine } from '../template/template-engine.js';
 import { IntentClassifier } from '../template/intent-classifier.js';
 import { NLIntent } from '../template/nl-intent.js';
-import type { ContextSchema } from '../SpelEvaluator.js';
+import type { ContextSchema } from '@agentix-e/spel-ts';
 
 const classifier = new IntentClassifier();
 

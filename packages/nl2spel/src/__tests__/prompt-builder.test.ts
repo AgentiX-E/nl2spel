@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PromptBuilder } from '../template/prompts/prompt-builder.js';
-import type { ContextSchema } from '../SpelEvaluator.js';
+import type { ContextSchema } from '@agentix-e/spel-ts';
 
 const TEST_SCHEMA: ContextSchema = {
   root: {

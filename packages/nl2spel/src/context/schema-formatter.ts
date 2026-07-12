@@ -1,4 +1,4 @@
-import type { ContextSchema, FieldSchema } from '../SpelEvaluator.js';
+import type { ContextSchema, FieldSchema } from '@agentix-e/spel-ts';
 
 /**
  * SchemaFormatter — formats ContextSchema into readable text.

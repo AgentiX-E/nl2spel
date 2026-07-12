@@ -13,7 +13,7 @@ export type {
   TypeSchema,
   MethodSchema,
   FunctionSchema,
-} from './SpelEvaluator.js';
+} from '@agentix-e/spel-ts';
 
 // LLMProvider types
 export type {

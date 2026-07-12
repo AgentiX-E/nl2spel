@@ -1,4 +1,4 @@
-import type { ContextSchema, SpelEvaluator } from '../SpelEvaluator.js';
+import type { ContextSchema, SpelEvaluator } from '@agentix-e/spel-ts';
 
 // ============================================================
 // Validation types
