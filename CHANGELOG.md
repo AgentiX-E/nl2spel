@@ -2,6 +2,22 @@
 
 All notable changes to the NL2SpEL project.
 
+## [1.1.0] — 2026-07-12
+
+### Changed
+- **Type imports migration**: `PromptBuilder` changed from type-only to value import in `nl2spel-openai` to fix `require()` in ESM module
+- **SelfCorrectionLoop fix**: Removed dynamic `require()` call in `defaultPromptBuilder()`, replaced with static ES module import
+
+### Fixed
+- **P0**: `require()` call in ESM module (`openai-compatible-provider.ts`) — replaced with static import
+- **P0**: `workspace:*` in peerDependencies — replaced with `>=1.1.0` in both `nl2spel-openai` and `nl2spel-webllm`
+- **P0**: Phantom peerDependencies (`ai`, `@ai-sdk/openai`) removed from `nl2spel-openai`
+- **P1**: Dead vitest coverage exclusions (`SpelEvaluator.ts`, `src/strategy/strategies/**`) removed
+
+### Dependencies
+- **`@agentix-e/spel-ts`**: Made optional peer dependency in core package
+- Sub-packages bumped to v1.1.0 to match core
+
 ## [1.0.0] — 2026-07-12
 
 ### 🏗 Architecture
@@ -10,11 +26,11 @@ All notable changes to the NL2SpEL project.
 - WebLLM package: 4 → 3 source files (net -475 lines)
 
 ### 🧪 Testing
-- **665 vitest tests** across 20 test files (527 core + 55 openai + 83 webllm)
+- **650 vitest tests** across 19 test files (527 core + 55 openai + 68 webllm)
 - **7 Playwright browser tests** in real Chromium (model-configs)
 - **Real DeepSeek integration tests** — 17 tests covering comparison, null, logical, range, collection, permission, streaming, error handling
 - **Mocked fetch tests** — 19 tests for OpenAI provider (generate, stream, error paths, retry)
-- **Core**: 99.71% statements / 95.12% branches / 100% functions
+- **Core**: 99.6% statements / 94.95% branches / 100% functions
 - **OpenAI**: 100% statements / 95.12% branches / 100% functions
 - **WebLLM**: 100% statements / 92.3% branches / 100% functions
 

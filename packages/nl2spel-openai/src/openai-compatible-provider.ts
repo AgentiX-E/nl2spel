@@ -5,7 +5,7 @@ import {
   type LLMGenerateOptions,
   type LLMResponse,
   type LLMStreamChunk,
-  type PromptBuilder,
+  PromptBuilder,
   type ContextSchema,
 } from '@agentix-e/nl2spel';
 import { PROVIDER_PRESETS, type ProviderPreset } from './provider-presets.js';
@@ -37,9 +37,6 @@ export interface OpenAICompatibleConfig {
 }
 
 function defaultPromptBuilder(): PromptBuilder {
-  // Dynamic import to avoid circular dependency
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { PromptBuilder } = require('@agentix-e/nl2spel') as typeof import('@agentix-e/nl2spel');
   return new PromptBuilder();
 }
 

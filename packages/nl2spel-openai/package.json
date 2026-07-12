@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/nl2spel-openai",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "OpenAI-compatible LLM provider for @agentix-e/nl2spel",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,13 +22,7 @@
   },
   "dependencies": {},
   "peerDependencies": {
-    "@agentix-e/nl2spel": "workspace:*",
-    "ai": "^4.0.0",
-    "@ai-sdk/openai": "^1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "ai": { "optional": false },
-    "@ai-sdk/openai": { "optional": false }
+    "@agentix-e/nl2spel": ">=1.1.0"
   },
   "devDependencies": {
     "@agentix-e/nl2spel": "workspace:*",
