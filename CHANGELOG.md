@@ -1,6 +1,50 @@
 # Changelog
 
-All notable changes to the NL2SpEL project from v0.1.0 onward.
+All notable changes to the NL2SpEL project.
+
+## [1.0.0] — 2026-07-12
+
+### 🏗 Architecture
+- **Removed redundant GPU detection layer** — `webgpu-detector.ts` deleted; WebLLM's `CreateMLCEngine` handles GPU detection natively
+- **Removed dead code**: `determineGPULevel()` (unused return value), `ensureInitialized()` (inlined)
+- WebLLM package: 4 → 3 source files (net -475 lines)
+
+### 🧪 Testing
+- **665 vitest tests** across 20 test files (527 core + 55 openai + 83 webllm)
+- **7 Playwright browser tests** in real Chromium (model-configs)
+- **Real DeepSeek integration tests** — 17 tests covering comparison, null, logical, range, collection, permission, streaming, error handling
+- **Mocked fetch tests** — 19 tests for OpenAI provider (generate, stream, error paths, retry)
+- **Core**: 99.71% statements / 95.12% branches / 100% functions
+- **OpenAI**: 100% statements / 95.12% branches / 100% functions
+- **WebLLM**: 100% statements / 92.3% branches / 100% functions
+
+### 🔧 CI/CD
+- **Single unified `ci.yml`** — 6 jobs: Lint/TypeCheck, Tests/Coverage, Benchmark, Browser Tests, API Docs, GitHub Pages
+- **Dual Pages deployment** — workflow deploy + gh-pages branch fallback
+- **GitHub Pages** — Home, User Guide, API Docs, Coverage Report, Benchmark Report
+- **Local=CI zero drift** — husky pre-commit mirrors CI quality gates
+- **Playwright browser tests** in CI pipeline
+
+### 📦 Release
+- **Trusted Publisher (OIDC)** via `release.yml` — Node 24 + npm 11.x native OIDC, no stored tokens
+- **Skip already-published** versions
+- **npm provenance** attestation
+
+### 🔒 Security
+- `.env` / `.env.*.local` gitignored
+- API key never in code or CI logs
+- GitHub secret masking for `DEEPSEEK_API_KEY`
+
+### 🧹 Code Quality
+- Auto-fixer: removed unreachable `??` fallbacks → 100% branches
+- Provider-registry: restructured sort for clean branch detection
+- GBNF generator: removed unreachable else branch and unused fieldRule
+- OpenAI provider: removed unreachable `??` in throw, stream path
+- TypeScript strict mode, zero errors
+- Prettier 100% formatting consistency
+- English-only documentation
+
+---
 
 ## [0.1.0] — 2025-07-10
 

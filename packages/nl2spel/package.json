@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/nl2spel",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Natural Language → SpEL Expression Generation Engine — Core",
   "type": "module",
   "main": "./dist/index.js",
