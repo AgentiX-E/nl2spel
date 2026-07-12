@@ -175,12 +175,42 @@ jobs:
           path: api-docs/
           retention-days: 7
 
+  # ===== Browser Tests (WebLLM) =====
+  browser-test:
+    name: Browser Tests (WebLLM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build WebLLM package
+        run: pnpm --filter @agentix-e/nl2spel build && pnpm --filter @agentix-e/nl2spel-webllm build
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @agentix-e/nl2spel-webllm exec playwright install chromium
+
+      - name: Run browser tests
+        run: pnpm --filter @agentix-e/nl2spel-webllm exec playwright test --reporter=list
+
   # ===== Publish to GitHub Pages =====
   pages:
     name: Publish to GitHub Pages
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [test, benchmark, docs]
+    needs: [test, benchmark, docs, browser-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     permissions:
