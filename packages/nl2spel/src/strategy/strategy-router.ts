@@ -8,7 +8,7 @@ import type { TemplateResult } from '../template/template-engine.js';
 import { PromptBuilder } from '../template/prompts/prompt-builder.js';
 import { ProviderRegistry } from '../provider/provider-registry.js';
 import type { LLMProvider, LLMPrompt } from '../provider/llm-provider.js';
-import type { ContextSchema, SpelEvaluator } from '../SpelEvaluator.js';
+import type { ContextSchema, SpelEvaluator } from '@agentix-e/spel-ts';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
 import { AutoFixer } from '../validation/auto-fixer.js';
 import { SelfCorrectionLoop } from '../validation/self-correction-loop.js';
@@ -213,9 +213,12 @@ export class StrategyRouter {
 
         // Self-Correction loop
         if (this.config.enableSelfCorrection && contextSchema) {
-          const correctionLoop = new SelfCorrectionLoop({
-            maxAttempts: this.config.maxCorrectionAttempts,
-          });
+          const correctionLoop = new SelfCorrectionLoop(
+            {
+              maxAttempts: this.config.maxCorrectionAttempts,
+            },
+            this.validationPipeline,
+          );
           const correctionResult = await correctionLoop.correct(
             expression,
             contextSchema,

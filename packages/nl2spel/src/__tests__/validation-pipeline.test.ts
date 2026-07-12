@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
-import type { ContextSchema, SpelEvaluator, ParseResult } from '../SpelEvaluator.js';
+import type { ContextSchema, SpelEvaluator, ParseResult } from '@agentix-e/spel-ts';
 
 function createSchema(): ContextSchema {
   return {

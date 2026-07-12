@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/nl2spel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Natural Language → SpEL Expression Generation Engine — Core",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,7 +21,16 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {},
+  "peerDependencies": {
+    "@agentix-e/spel-ts": ">=1.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@agentix-e/spel-ts": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@agentix-e/spel-ts": "^1.1.0",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   },

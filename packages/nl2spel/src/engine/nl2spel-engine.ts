@@ -7,7 +7,7 @@ import type { PatternDefinition } from '../pattern/pattern-definition.js';
 import { IntentClassifier } from '../template/intent-classifier.js';
 import type { IntentResult } from '../template/intent-classifier.js';
 import { ContextExtractor } from '../context/context-extractor.js';
-import type { ContextSchema, SpelEvaluator } from '../SpelEvaluator.js';
+import type { ContextSchema, SpelEvaluator } from '@agentix-e/spel-ts';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
 
 export interface GenerateOptions {
@@ -112,6 +112,7 @@ export interface ExplainResult {
 export class NL2SpelEngine {
   private readonly router: StrategyRouter;
   private readonly providerRegistry: ProviderRegistry;
+  private evaluatorInstance: SpelEvaluator | null = null;
 
   constructor(config: StrategyRouterConfig = {}) {
     this.providerRegistry = new ProviderRegistry();
@@ -144,6 +145,7 @@ export class NL2SpelEngine {
    * Must be called before generate() if parse-level validation is required.
    */
   public setSpelEvaluator(evaluator: SpelEvaluator): void {
+    this.evaluatorInstance = evaluator;
     this.router.setEvaluator(evaluator);
   }
 
@@ -161,8 +163,12 @@ export class NL2SpelEngine {
   public async generate(nl: string, options: GenerateOptions = {}): Promise<GenerateResult> {
     const startTime = Date.now();
 
-    // Build ContextSchema
+    // Build ContextSchema — priority: explicit > evaluator > raw context
     let contextSchema = options.contextSchema;
+    if (!contextSchema && this.evaluatorInstance) {
+      const schema = await Promise.resolve(this.evaluatorInstance.getContextSchema());
+      if (schema) contextSchema = schema;
+    }
     if (!contextSchema && options.context) {
       const extractor = new ContextExtractor();
       contextSchema = extractor.extract(options.context);

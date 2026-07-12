@@ -6,7 +6,7 @@ import type {
   BeanSchema,
   TypeSchema,
   FunctionSchema,
-} from '../SpelEvaluator.js';
+} from '@agentix-e/spel-ts';
 
 /**
  * ContextExtractor — builds a ContextSchema from plain data structures.

@@ -1,5 +1,5 @@
 import type { LLMPrompt, FewShotExample } from '../../provider/llm-provider.js';
-import type { ContextSchema } from '../../SpelEvaluator.js';
+import type { ContextSchema } from '@agentix-e/spel-ts';
 import { SchemaFormatter } from '../../context/schema-formatter.js';
 
 // ============================================================

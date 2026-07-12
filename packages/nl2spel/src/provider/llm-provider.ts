@@ -1,4 +1,4 @@
-import type { ContextSchema } from '../SpelEvaluator.js';
+import type { ContextSchema } from '@agentix-e/spel-ts';
 
 // ============================================================
 // LLMProvider interface
@@ -194,4 +194,4 @@ export interface LLMUsage {
   totalTokens: number;
 }
 
-export type { ContextSchema } from '../SpelEvaluator.js';
+export type { ContextSchema } from '@agentix-e/spel-ts';
