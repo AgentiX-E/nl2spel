@@ -2,7 +2,7 @@
 
 > Browser-local LLM Provider for @agentix-e/nl2spel
 >
-> GBNF grammar-constrained decoding · WebGPU acceleration · 4 optimized models · Zero API cost
+> GBNF grammar-constrained decoding · 4 optimized models · Zero API cost · WebLLM handles GPU detection natively
 
 [![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel-webllm)](https://www.npmjs.com/package/@agentix-e/nl2spel-webllm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)

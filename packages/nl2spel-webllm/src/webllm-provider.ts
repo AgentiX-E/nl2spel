@@ -9,7 +9,6 @@ import type {
 } from '@agentix-e/nl2spel';
 import { GBNFGenerator } from './gbnf-generator.js';
 import { MODEL_CONFIGS, type ModelConfig } from './model-configs.js';
-import { detectWebGPU } from './webgpu-detector.js';
 
 export interface WebLLMConfig {
   /** Model ID */
@@ -38,10 +37,9 @@ export interface ModelLoadProgress {
 /**
  * WebLLMProvider — browser-side local LLM provider.
  *
- * Implements the LLMProvider interface, using WebLLM (@mlc-ai/web-llm)
- * to run local models in the browser, with GBNF grammar-constrained decoding.
- *
- * Note: this provider only works in browser environments (requires WebGPU and navigator.gpu).
+ * Uses @mlc-ai/web-llm to run local models in the browser.
+ * WebLLM's CreateMLCEngine handles all GPU detection and error reporting internally.
+ * This provider simply delegates to WebLLM's native capabilities.
  */
 export class WebLLMProvider implements LLMProvider {
   public readonly name = 'webllm';
@@ -51,7 +49,7 @@ export class WebLLMProvider implements LLMProvider {
   private readonly modelConfig: ModelConfig;
   private readonly gbnfGenerator: GBNFGenerator;
 
-  private _engine: unknown = null; // CreateMLCEngine instance
+  private _engine: unknown = null;
   private _initialized = false;
   private _initPromise: Promise<void> | null = null;
 
@@ -75,13 +73,14 @@ export class WebLLMProvider implements LLMProvider {
       supportsStreaming: true,
       supportsStructuredOutput: false,
       offlineAvailable: true,
-      estimatedCostPerRequest: 0, // Local inference, zero API cost
+      estimatedCostPerRequest: 0,
       estimatedLatencyMs: Math.round((1000 / this.modelConfig.estimatedTokPerSec) * 50),
     };
   }
 
   /**
-   * Initialize — check WebGPU and download/load the model.
+   * Initialize — download and load the model via WebLLM.
+   * WebLLM's CreateMLCEngine handles GPU detection natively.
    */
   async initialize(): Promise<void> {
     if (this._initialized) return;
@@ -92,27 +91,8 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   private async _doInitialize(): Promise<void> {
-    // 1. Check WebGPU
-    const webgpuResult = await detectWebGPU();
-    if (!webgpuResult.available) {
-      throw new Error(
-        `WebGPU is not available: ${webgpuResult.error}. ` +
-          `WebLLMProvider requires WebGPU support in the browser.`,
-      );
-    }
-
-    if (this.config.debug) {
-      console.log('[WebLLM] WebGPU detected:', webgpuResult.adapterInfo);
-    }
-
-    // 2. Dynamic import of WebLLM (browser-only)
     try {
-      // WebLLM is browser-specific; it will fail in Node.js environments
-      // Using dynamic import so the package can still be loaded for Node.js testing
       const { CreateMLCEngine } = await this.importWebLLM();
-
-      // 3. Create engine and load model
-      const gpuLevel = this.determineGPULevel(webgpuResult);
 
       this._engine = await CreateMLCEngine(this.modelConfig.modelId, {
         initProgressCallback: (report: { progress: number; timeElapsed: number; text: string }) => {
@@ -137,33 +117,18 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   /**
-   * Dynamic import of WebLLM (separated import for easier test mocking)
+   * Dynamic import of WebLLM (separated for test mocking)
    */
   private async importWebLLM(): Promise<any> {
-    // Attempt dynamic import; will fail if not in a browser environment
     return import('@mlc-ai/web-llm');
   }
 
-  private determineGPULevel(webgpuResult: {
-    adapterInfo?: { vendor: string; architecture: string };
-  }): string {
-    const arch = webgpuResult.adapterInfo?.architecture?.toLowerCase() ?? '';
-    if (arch.includes('apple') || arch.includes('nvidia') || arch.includes('amd')) {
-      return 'high';
-    }
-    return 'medium';
-  }
-
   /**
-   * Check if the provider is available
+   * Check if the provider is available.
+   * Simply returns true — actual GPU availability is determined by WebLLM at initialization.
    */
   async isAvailable(): Promise<boolean> {
-    try {
-      const result = await detectWebGPU();
-      return result.available;
-    } catch {
-      return false;
-    }
+    return true;
   }
 
   /**
@@ -179,16 +144,14 @@ export class WebLLMProvider implements LLMProvider {
 
     const startTime = Date.now();
 
-    // Build messages
     const messages = [
       { role: 'system' as const, content: prompt.system },
       { role: 'user' as const, content: prompt.user },
     ];
 
     // Generate GBNF grammar constraint
-    let grammar: string | undefined;
     if (this.config.enableGrammar) {
-      grammar = this.gbnfGenerator.generate(prompt.contextSchema);
+      this.gbnfGenerator.generate(prompt.contextSchema);
     }
 
     try {
@@ -197,7 +160,6 @@ export class WebLLMProvider implements LLMProvider {
         temperature: options?.temperature ?? 0.1,
         max_tokens: options?.maxTokens ?? 512,
         top_p: options?.topP ?? 0.9,
-        ...(grammar ? { response_format: { type: 'json_schema', json_schema: {} } } : {}),
       });
 
       const text = completion.choices?.[0]?.message?.content?.trim() ?? '';
@@ -221,7 +183,8 @@ export class WebLLMProvider implements LLMProvider {
   }
 
   /**
-   * Streaming generation (not yet implemented; WebLLM supports it but needs extra handling)
+   * Streaming generation — falls back to generate() since WebLLM stream API
+   * requires extra handling not yet implemented.
    */
   async *generateStream(
     prompt: LLMPrompt,
@@ -229,8 +192,6 @@ export class WebLLMProvider implements LLMProvider {
   ): AsyncIterable<LLMStreamChunk> {
     await this.ensureInitialized();
 
-    // WebLLM streaming generation is not yet implemented (requires @mlc-ai/web-llm stream API)
-    // As a fallback, generate the full result and output it all at once
     const result = await this.generate(prompt, options);
     yield {
       delta: result.text,
