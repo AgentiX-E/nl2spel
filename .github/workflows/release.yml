@@ -1,15 +1,18 @@
 name: Release
 
-# Release workflow — publishes all packages to npm via Trusted Publisher (OIDC)
-# Triggered on version tags (v*.*.*) or manual dispatch
+# Publish all packages to npm via Trusted Publisher (OIDC).
+# Modeled after AgentiX-E/timesfm-ts release workflow.
+#
+# OIDC (OpenID Connect) authenticates to npm without stored tokens.
+# Requires npm package to be configured for Trusted Publishing:
+# https://docs.npmjs.com/creating-and-publishing-packages-with-a-github-actions-workflow
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    tags: ['v*']
   workflow_dispatch:
     inputs:
-      tag:
+      dist_tag:
         description: 'npm dist-tag'
         required: true
         default: 'alpha'
@@ -18,13 +21,19 @@ on:
           - alpha
           - latest
 
+permissions:
+  contents: read
+  id-token: write  # OIDC — npm provenance + trusted publisher
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  # ===== Quality gate (typecheck + format + test) before publishing =====
-  quality-gate:
+  # ═══════════════════════════════════════════════════════════════════════
+  # Stage 1 — Quality Gate
+  # ═══════════════════════════════════════════════════════════════════════
+  quality:
     name: Quality Gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -55,20 +64,19 @@ jobs:
       - name: Run tests
         run: pnpm -r run test --coverage --reporter=verbose
 
-  # ===== Publish to npm =====
+  # ═══════════════════════════════════════════════════════════════════════
+  # Stage 2 — Publish to npm (OIDC Trusted Publisher)
+  # ═══════════════════════════════════════════════════════════════════════
   publish:
     name: Publish to npm
+    needs: quality
+    if: ${{ !cancelled() && needs.quality.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [quality-gate]
 
     permissions:
       contents: read
-      id-token: write  # Required for OIDC (npm provenance)
-
-    strategy:
-      matrix:
-        package: [nl2spel, nl2spel-openai, nl2spel-webllm]
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -77,50 +85,74 @@ jobs:
         with:
           version: 9
 
+      # Node 24 bundles npm 11.x which natively supports OIDC tokens.
+      # npm 10.x (Node 22) falls back to .npmrc authToken, breaking OIDC.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Build core package
         run: pnpm --filter @agentix-e/nl2spel build
 
-      - name: Build ${{ matrix.package }}
-        run: pnpm --filter @agentix-e/${{ matrix.package }} build
+      - name: Build all packages
+        run: pnpm build
 
-      - name: Determine npm tag
+      - name: Determine npm dist-tag
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "tag=${{ github.event.inputs.dist_tag }}" >> "$GITHUB_OUTPUT"
           else
             TAG="${{ github.ref_name }}"
             if echo "$TAG" | grep -qE 'alpha|beta|rc|preview'; then
-              echo "tag=alpha" >> $GITHUB_OUTPUT
+              echo "tag=alpha" >> "$GITHUB_OUTPUT"
             else
-              echo "tag=latest" >> $GITHUB_OUTPUT
+              echo "tag=latest" >> "$GITHUB_OUTPUT"
             fi
           fi
 
-      - name: Publish @agentix-e/${{ matrix.package }}
+      - name: Publish packages to npm
         run: |
-          cd packages/${{ matrix.package }}
-          pnpm publish --access public --tag ${{ steps.tag.outputs.tag }} --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+          for pkg in nl2spel nl2spel-openai nl2spel-webllm; do
+            cd "packages/${pkg}"
+            PKG_NAME=$(node -p "require('./package.json').name")
+            PKG_VER=$(node -p "require('./package.json').version")
 
-  # ===== GitHub Release (tag-based only) =====
+            if npm view "${PKG_NAME}@${PKG_VER}" version >/dev/null 2>&1; then
+              echo "⚠ ${PKG_NAME}@${PKG_VER} already published — skipping"
+              cd ../..
+              continue
+            fi
+
+            npm publish --access public --tag "${{ steps.tag.outputs.tag }}" --no-git-checks --provenance
+            cd ../..
+          done
+
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "### 📦 npm Packages Published" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Package | Version | Tag |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|---------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          for pkg in nl2spel nl2spel-openai nl2spel-webllm; do
+            name=$(node -p "require('./packages/${pkg}/package.json').name")
+            version=$(node -p "require('./packages/${pkg}/package.json').version")
+            echo "| \`${name}\` | ${version} | ${{ steps.tag.outputs.tag }} |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Stage 3 — GitHub Release (tag only)
+  # ═══════════════════════════════════════════════════════════════════════
   github-release:
-    name: Create GitHub Release
+    name: GitHub Release
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [publish]
-    if: startsWith(github.ref, 'refs/tags/v')
 
     permissions:
       contents: write
@@ -135,11 +167,11 @@ jobs:
           VER_NUM="${VERSION#v}"
           if grep -q "^## \[${VER_NUM}\]" CHANGELOG.md; then
             awk "/^## \[${VER_NUM}\]/,/^## \[/" CHANGELOG.md | sed '1d;$d' | sed '/^---/d' > release-notes.md
-            echo "has_notes=true" >> $GITHUB_OUTPUT
+            echo "has_notes=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_notes=false" >> $GITHUB_OUTPUT
+            echo "has_notes=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "version=${VER_NUM}" >> $GITHUB_OUTPUT
+          echo "version=${VER_NUM}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

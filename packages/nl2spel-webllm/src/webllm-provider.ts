@@ -135,7 +135,7 @@ export class WebLLMProvider implements LLMProvider {
    * Generate a SpEL expression
    */
   async generate(prompt: LLMPrompt, options?: LLMGenerateOptions): Promise<LLMResponse> {
-    if (!this._initialized) await this.initialize();
+    await this.initialize();
     const engine = this._engine as any;
 
     const startTime = Date.now();
@@ -186,7 +186,7 @@ export class WebLLMProvider implements LLMProvider {
     prompt: LLMPrompt,
     options?: LLMGenerateOptions,
   ): AsyncIterable<LLMStreamChunk> {
-    if (!this._initialized) await this.initialize();
+    await this.initialize();
 
     const result = await this.generate(prompt, options);
     yield {
