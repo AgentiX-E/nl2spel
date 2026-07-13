@@ -2,6 +2,18 @@
 
 All notable changes to the NL2SpEL project.
 
+## [1.1.1] — 2026-07-13
+
+### Fixed
+- **PromptBuilder English filter bug**: Replaced broken `.toLowerCase()` check with CJK character detection for accurate English/Chinese example filtering
+- **CONTRIBUTING.md branch name**: Changed all `main` references to `master` to match actual default branch
+- **AutoFixResult redundant field**: Removed unused `fixed` field from `AutoFixResult` interface
+- **SelfCorrectionLoop duplicate logs**: Fixed duplicate attempt=0 log entries in correction loop
+- **Sub-package peerDeps**: Changed `workspace:*` to `>=1.1.0` in `nl2spel-openai` and `nl2spel-webllm` peerDependencies for npm compatibility
+- **Phantom peerDependencies**: Removed unused `ai` and `@ai-sdk/openai` from `nl2spel-openai` peerDeps
+- **GBNF dead code**: Commented out unused GBNF generation call in WebLLM provider
+- **Documentation**: Updated stale test counts (527/68 core/webllm) and pattern count (48+)
+
 ## [1.1.0] — 2026-07-12
 
 ### Changed

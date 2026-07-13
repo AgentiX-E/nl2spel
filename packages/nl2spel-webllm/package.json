@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/nl2spel-webllm",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "WebLLM browser-local provider for @agentix-e/nl2spel",
   "type": "module",
   "main": "./dist/index.js",
