@@ -220,7 +220,7 @@ export class NL2SpelEngine {
     nls: string[],
     options: GenerateOptions = {},
   ): Promise<GenerateResult[]> {
-    return Promise.all(nls.map(nl => this.generate(nl, options)));
+    return Promise.all(nls.map((nl) => this.generate(nl, options)));
   }
 
   /**
@@ -246,7 +246,7 @@ export class NL2SpelEngine {
       patternMatched: patternResult.matched,
       patternId: patternResult.pattern?.id,
       expression: result.expression,
-      alternatives: allPatternResults.filter(r => r.spel).map(r => r.spel!),
+      alternatives: allPatternResults.filter((r) => r.spel).map((r) => r.spel!),
     };
   }
 }

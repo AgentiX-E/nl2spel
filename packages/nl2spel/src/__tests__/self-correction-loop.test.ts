@@ -68,7 +68,7 @@ describe('SelfCorrectionLoop', () => {
     expect(result.correctionAttempts).toBeLessThanOrEqual(1);
     expect(result.expression).not.toContain('===');
     // Should have been auto-fixed
-    const autoFixCorrection = result.corrections.find(c => c.autoFixed);
+    const autoFixCorrection = result.corrections.find((c) => c.autoFixed);
     expect(autoFixCorrection).toBeDefined();
   });
 
@@ -220,9 +220,9 @@ describe('SelfCorrectionLoop', () => {
       expect(result.expression).toContain('==');
       expect(generateFn).not.toHaveBeenCalled();
       // Auto-fix correction log should exist
-      const autoFixEntry = result.corrections.find(c => c.autoFixed);
+      const autoFixEntry = result.corrections.find((c) => c.autoFixed);
       expect(autoFixEntry).toBeDefined();
-      expect(autoFixEntry!.autoFixChanges.some(c => c.includes('==='))).toBe(true);
+      expect(autoFixEntry!.autoFixChanges.some((c) => c.includes('==='))).toBe(true);
     });
 
     it('expression needing exactly 2 correction attempts', async () => {
@@ -263,7 +263,7 @@ describe('SelfCorrectionLoop', () => {
       expect(result.correctionAttempts).toBe(2);
       expect(generateFn).toHaveBeenCalledTimes(2);
       // Correction log entries should record the failure
-      expect(result.corrections.every(c => !c.valid)).toBe(true);
+      expect(result.corrections.every((c) => !c.valid)).toBe(true);
       for (const entry of result.corrections) {
         expect(entry.errorCount).toBe(1);
       }
@@ -286,11 +286,11 @@ describe('SelfCorrectionLoop', () => {
 
       // Should have a correction log entry for the auto-fix
       expect(result.corrections.length).toBeGreaterThanOrEqual(1);
-      const autoFixEntry = result.corrections.find(c => c.autoFixed);
+      const autoFixEntry = result.corrections.find((c) => c.autoFixed);
       expect(autoFixEntry).toBeDefined();
       // Auto-fix should include both === fix and double-quote fix
-      expect(autoFixEntry!.autoFixChanges.some(c => c.includes('==='))).toBe(true);
-      expect(autoFixEntry!.autoFixChanges.some(c => c.includes('quote'))).toBe(true);
+      expect(autoFixEntry!.autoFixChanges.some((c) => c.includes('==='))).toBe(true);
+      expect(autoFixEntry!.autoFixChanges.some((c) => c.includes('quote'))).toBe(true);
     });
 
     it('verify correction log entry format and content', async () => {

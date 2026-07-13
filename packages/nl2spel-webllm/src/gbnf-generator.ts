@@ -219,7 +219,7 @@ export class GBNFGenerator {
     const uniqueIds = [...new Set(identifiers)];
 
     // Generate identifier rule (GBNF string alternation)
-    const idRules = uniqueIds.map(id => `"${id}"`).join(' | ');
+    const idRules = uniqueIds.map((id) => `"${id}"`).join(' | ');
     rules.push(`identifier ::= (${idRules}) | general-identifier`);
     rules.push('general-identifier ::= letter (letter-or-digit | underscore)*');
 
@@ -258,10 +258,10 @@ export class GBNFGenerator {
 
     return {
       rootRule:
-        sections.find(s => s.rules.some(r => r.startsWith('root')))?.rules[0] ??
+        sections.find((s) => s.rules.some((r) => r.startsWith('root')))?.rules[0] ??
         'root ::= expression',
       sections,
-      ruleCount: lines.filter(l => l.includes('::=') && !l.startsWith('#')).length,
+      ruleCount: lines.filter((l) => l.includes('::=') && !l.startsWith('#')).length,
     };
   }
 }

@@ -260,7 +260,7 @@ export class PromptBuilder {
       lang === 'zh'
         ? FEWSHOT_EXAMPLES
         : FEWSHOT_EXAMPLES.filter(
-            e =>
+            (e) =>
               // Include all English examples (CJK characters indicate non-English)
               !/[\u4e00-\u9fff\u3400-\u4dbf]/.test(e.nl) ||
               e.category === 'comparison' ||

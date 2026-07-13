@@ -139,7 +139,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
     // Include few-shot examples as part of user message if not already in it
     if (prompt.examples.length > 0 && !prompt.user.includes('Few-Shot')) {
-      const exampleText = prompt.examples.map(e => `NL: ${e.nl}\nSpEL: ${e.spel}`).join('\n\n');
+      const exampleText = prompt.examples.map((e) => `NL: ${e.nl}\nSpEL: ${e.spel}`).join('\n\n');
       messages.push({
         role: 'user',
         content: `Examples:\n${exampleText}\n\nInput: ${prompt.user}`,
@@ -202,7 +202,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       } catch (err) {
         lastError = err as Error;
         if (retry < maxRetries) {
-          await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
+          await new Promise((r) => setTimeout(r, 1000 * (retry + 1)));
         }
       }
     }
@@ -258,7 +258,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+        const lines = chunk.split('\n').filter((l) => l.startsWith('data: '));
 
         for (const line of lines) {
           const data = line.slice(6).trim();

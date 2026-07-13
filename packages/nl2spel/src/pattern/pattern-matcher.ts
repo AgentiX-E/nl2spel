@@ -114,7 +114,7 @@ export class PatternMatcher {
   private normalize(input: string): string {
     return input
       .trim()
-      .replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+      .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
       .replace(/\s+/g, ' ')
       .replace(/[，,。.!！?？;；:：]+$/, '');
   }

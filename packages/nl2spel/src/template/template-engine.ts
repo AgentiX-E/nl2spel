@@ -391,7 +391,7 @@ export class TemplateEngine {
     expression = expression.replace(/\{root\}/g, rootName);
     expression = expression.replace(/\{field\}/g, fieldName);
     // Extract field entities for dual-field templates
-    const fieldEntities = intentResult.entities.filter(e => e.type === 'field');
+    const fieldEntities = intentResult.entities.filter((e) => e.type === 'field');
     const field1Name = fieldEntities[0]?.text ?? fieldName;
     const field2Name = fieldEntities[1]?.text ?? fieldName;
     expression = expression.replace(/\{field1\}/g, field1Name);
@@ -401,10 +401,10 @@ export class TemplateEngine {
 
     // Extract numeric entities
     const numberEntities = intentResult.entities.filter(
-      e => e.type === 'value' && !isNaN(Number(e.text)),
+      (e) => e.type === 'value' && !isNaN(Number(e.text)),
     );
     const stringEntities = intentResult.entities.filter(
-      e => e.type === 'value' && isNaN(Number(e.text)),
+      (e) => e.type === 'value' && isNaN(Number(e.text)),
     );
 
     // Fill numeric values

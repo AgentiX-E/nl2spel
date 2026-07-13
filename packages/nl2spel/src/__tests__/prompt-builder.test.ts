@@ -66,7 +66,7 @@ describe('PromptBuilder', () => {
 
     it('should have examples spanning all difficulty levels', () => {
       const prompt = builder.build('complex query', TEST_SCHEMA);
-      const difficulties = new Set(prompt.examples.map(e => e.difficulty));
+      const difficulties = new Set(prompt.examples.map((e) => e.difficulty));
       expect(difficulties.has('easy')).toBe(true);
       expect(difficulties.has('medium')).toBe(true);
       expect(difficulties.has('hard')).toBe(true);

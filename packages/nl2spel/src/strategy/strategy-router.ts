@@ -189,9 +189,9 @@ export class StrategyRouter {
 
     // If a specific provider is forced, use it first
     if (forceLLMProvider) {
-      const forced = providers.find(p => p.name === forceLLMProvider);
+      const forced = providers.find((p) => p.name === forceLLMProvider);
       if (forced) {
-        providers = [forced, ...providers.filter(p => p !== forced)];
+        providers = [forced, ...providers.filter((p) => p !== forced)];
       }
     }
 
@@ -219,7 +219,7 @@ export class StrategyRouter {
           const correctionResult = await correctionLoop.correct(
             expression,
             contextSchema,
-            prompt => provider.generate(prompt),
+            (prompt) => provider.generate(prompt),
             prompt,
           );
           expression = correctionResult.expression;

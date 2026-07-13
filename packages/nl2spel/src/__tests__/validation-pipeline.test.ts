@@ -66,32 +66,32 @@ describe('ValidationPipeline', () => {
     it('should fail empty expression', async () => {
       const result = await pipeline.validate('', schema);
       expect(result.stages.parse.passed).toBe(false);
-      expect(result.errors.some(e => e.code === 'PARSE-EMPTY')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-EMPTY')).toBe(true);
     });
 
     it('should detect JS === operator', async () => {
       const result = await pipeline.validate('#order.amount === 1000', schema);
-      expect(result.errors.some(e => e.code === 'PARSE-JS_OPERATOR')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-JS_OPERATOR')).toBe(true);
     });
 
     it('should detect JS !== operator', async () => {
       const result = await pipeline.validate("#order.status !== 'done'", schema);
-      expect(result.errors.some(e => e.code === 'PARSE-JS_OPERATOR')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-JS_OPERATOR')).toBe(true);
     });
 
     it('should detect JS && operator', async () => {
       const result = await pipeline.validate('#order.amount > 100 && #order.paid', schema);
-      expect(result.errors.some(e => e.code === 'PARSE-JS_LOGIC')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-JS_LOGIC')).toBe(true);
     });
 
     it('should detect JS || operator', async () => {
       const result = await pipeline.validate('#order.vip || #order.admin', schema);
-      expect(result.errors.some(e => e.code === 'PARSE-JS_LOGIC')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-JS_LOGIC')).toBe(true);
     });
 
     it('should detect unbalanced parentheses', async () => {
       const result = await pipeline.validate('(#order.amount > 100', schema);
-      expect(result.errors.some(e => e.code === 'PARSE-UNBALANCED_PARENS')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-UNBALANCED_PARENS')).toBe(true);
     });
 
     it('should pass balanced complex expressions', async () => {
@@ -168,7 +168,7 @@ describe('ValidationPipeline', () => {
 
     it('should warn without ContextSchema', async () => {
       const result = await pipeline.validate('#order.amount > 100');
-      expect(result.stages.context.warnings.some(w => w.code === 'CTX-NO_SCHEMA')).toBe(true);
+      expect(result.stages.context.warnings.some((w) => w.code === 'CTX-NO_SCHEMA')).toBe(true);
     });
 
     it('should pass known bean reference', async () => {
@@ -205,8 +205,8 @@ describe('ValidationPipeline', () => {
 
     it('should mark errors as requiring LLM re-generation', async () => {
       const result = await pipeline.validate('#order.amount === 1000', schema);
-      const parseErrors = result.errors.filter(e => e.stage === 'parse');
-      expect(parseErrors.some(e => e.requiresLLM)).toBe(true);
+      const parseErrors = result.errors.filter((e) => e.stage === 'parse');
+      expect(parseErrors.some((e) => e.requiresLLM)).toBe(true);
     });
   });
 
@@ -240,13 +240,13 @@ describe('ValidationPipeline', () => {
     it('should fail expression that is whitespace only after trim', async () => {
       const result = await pipeline.validate('   ', schema);
       expect(result.stages.parse.passed).toBe(false);
-      expect(result.errors.some(e => e.code === 'PARSE-EMPTY')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-EMPTY')).toBe(true);
     });
 
     it('should detect unbalanced curly braces', async () => {
       const result = await pipeline.validate('#order.amount > 100}', schema);
       expect(result.stages.parse.passed).toBe(false);
-      expect(result.errors.some(e => e.code === 'PARSE-UNBALANCED_PARENS')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-UNBALANCED_PARENS')).toBe(true);
     });
 
     it('should handle instanceof with unknown type in ContextSchema', async () => {
@@ -290,9 +290,9 @@ describe('ValidationPipeline', () => {
         schema,
       );
       // Type stage: string-number comparison
-      expect(result.stages.type.warnings.some(w => w.code === 'TYPE-STR_NUM_CMP')).toBe(true);
+      expect(result.stages.type.warnings.some((w) => w.code === 'TYPE-STR_NUM_CMP')).toBe(true);
       // Semantic stage: self-comparison
-      expect(result.stages.semantic.warnings.some(w => w.code === 'SEM-SELF_COMPARE')).toBe(true);
+      expect(result.stages.semantic.warnings.some((w) => w.code === 'SEM-SELF_COMPARE')).toBe(true);
       // Total warnings should be at least 2
       expect(result.warnings.length).toBeGreaterThanOrEqual(2);
     });
@@ -313,8 +313,8 @@ describe('ValidationPipeline', () => {
 
       expect(result.stages.parse.passed).toBe(false);
       expect(result.stages.parse.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.code === 'PARSE-EXCEPTION')).toBe(true);
-      expect(result.errors.some(e => e.message.includes('Parser engine failure'))).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-EXCEPTION')).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('Parser engine failure'))).toBe(true);
     });
   });
 });

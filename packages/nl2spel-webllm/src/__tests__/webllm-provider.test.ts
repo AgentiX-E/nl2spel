@@ -138,7 +138,7 @@ describe('WebLLMProvider', () => {
 
     it('should reuse in-progress initPromise', async () => {
       let resolveInit: (value: any) => void = () => {};
-      const initPromise = new Promise<any>(r => {
+      const initPromise = new Promise<any>((r) => {
         resolveInit = r;
       });
       mockCreateMLCEngine.mockReturnValueOnce(initPromise);

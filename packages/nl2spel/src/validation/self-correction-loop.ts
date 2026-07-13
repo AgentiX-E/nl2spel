@@ -129,7 +129,7 @@ export class SelfCorrectionLoop {
 
       // Build correction prompt
       const errorDescriptions = lastValidation.errors
-        .map(e => `- [${e.code}] ${e.message}`)
+        .map((e) => `- [${e.code}] ${e.message}`)
         .join('\n');
 
       const correctionPrompt: LLMPrompt = {
@@ -191,7 +191,7 @@ export class SelfCorrectionLoop {
       expression: currentExpression,
       valid,
       originalOutput: expression,
-      correctionAttempts: corrections.filter(c => c.attempt > 0).length,
+      correctionAttempts: corrections.filter((c) => c.attempt > 0).length,
       corrections,
       totalLatencyMs: Date.now() - startTime,
     };

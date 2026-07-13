@@ -61,7 +61,7 @@ export class SchemaFormatter {
       lines.push('');
       lines.push(`Functions:`);
       for (const [name, funcDef] of Object.entries(schema.functions)) {
-        const params = funcDef.params.map(p => `${p.name}: ${p.type}`).join(', ');
+        const params = funcDef.params.map((p) => `${p.name}: ${p.type}`).join(', ');
         lines.push(`  #${name}(${params}): ${funcDef.returnType}`);
       }
     }

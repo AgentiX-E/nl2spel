@@ -13,7 +13,7 @@ export class ProviderRegistry {
 
   /** Register a Provider */
   public register(provider: LLMProvider): void {
-    if (this._providers.some(p => p.name === provider.name)) {
+    if (this._providers.some((p) => p.name === provider.name)) {
       throw new Error(`Provider '${provider.name}' already registered`);
     }
     this._providers.push(provider);
@@ -21,12 +21,12 @@ export class ProviderRegistry {
 
   /** Unregister a Provider */
   public unregister(name: string): void {
-    this._providers = this._providers.filter(p => p.name !== name);
+    this._providers = this._providers.filter((p) => p.name !== name);
   }
 
   /** Get a Provider by name */
   public get(name: string): LLMProvider | undefined {
-    return this._providers.find(p => p.name === name);
+    return this._providers.find((p) => p.name === name);
   }
 
   /**

@@ -714,7 +714,7 @@ describe('PatternMatcher', () => {
       const m = createMatcher();
       const results = m.matchAll('金额大于1000', 3);
       expect(results.length).toBeGreaterThanOrEqual(1);
-      results.forEach(r => {
+      results.forEach((r) => {
         expect(r.matched).toBe(true);
         expect(r.spel).toBeDefined();
       });

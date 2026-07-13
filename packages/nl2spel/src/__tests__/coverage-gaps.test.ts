@@ -176,7 +176,7 @@ describe('Coverage Gap Fillers', () => {
 
       expect(result.corrections.length).toBeGreaterThan(0);
       // Verify we have at least one log entry with errors
-      const errorLog = result.corrections.find(c => c.errorCount > 0);
+      const errorLog = result.corrections.find((c) => c.errorCount > 0);
       expect(errorLog).toBeDefined();
     });
 
@@ -213,7 +213,7 @@ describe('Coverage Gap Fillers', () => {
     it('detects unbalanced curly braces', async () => {
       const pipeline = new ValidationPipeline();
       const result = await pipeline.validate('{ #order.amount > 100 {', TEST_SCHEMA);
-      expect(result.errors.some(e => e.code === 'PARSE-UNBALANCED_PARENS')).toBe(true);
+      expect(result.errors.some((e) => e.code === 'PARSE-UNBALANCED_PARENS')).toBe(true);
     });
 
     it('evaluator throws an error during parse', async () => {
@@ -223,7 +223,7 @@ describe('Coverage Gap Fillers', () => {
       };
       const pipeline = new ValidationPipeline(throwingEvaluator as any);
       const result = await pipeline.validate('#order.amount > 1000', TEST_SCHEMA);
-      expect(result.stages.parse.errors.some(e => e.code === 'PARSE-EXCEPTION')).toBe(true);
+      expect(result.stages.parse.errors.some((e) => e.code === 'PARSE-EXCEPTION')).toBe(true);
     });
   });
 
@@ -379,7 +379,7 @@ describe('Coverage Gap Fillers', () => {
       // AutoFix fixes === but extra ] remains; validation fails → LLM is called
       expect(generateFn).toHaveBeenCalled();
       // Correction log should contain an auto-fixed entry
-      const autoFixEntry = result.corrections.find(c => c.autoFixed);
+      const autoFixEntry = result.corrections.find((c) => c.autoFixed);
       expect(autoFixEntry).toBeDefined();
     });
   });
@@ -503,7 +503,7 @@ describe('Coverage Gap Fillers', () => {
       const result = classifier.classify("status == 'active'");
       // After normalize, text becomes lowercase
       expect(
-        result.entities.some(e => e.type === 'value' && e.text.toLowerCase().includes('active')),
+        result.entities.some((e) => e.type === 'value' && e.text.toLowerCase().includes('active')),
       ).toBe(true);
     });
 
@@ -512,14 +512,14 @@ describe('Coverage Gap Fillers', () => {
       const result = classifier.classify('name == "John"');
       // After normalize, text becomes lowercase
       expect(
-        result.entities.some(e => e.type === 'value' && e.text.toLowerCase().includes('john')),
+        result.entities.some((e) => e.type === 'value' && e.text.toLowerCase().includes('john')),
       ).toBe(true);
     });
 
     it('detects operator position in entities', () => {
       const classifier = new IntentClassifier();
       const result = classifier.classify('amount >= 100');
-      expect(result.entities.some(e => e.type === 'operator' && e.text === '>=')).toBe(true);
+      expect(result.entities.some((e) => e.type === 'operator' && e.text === '>=')).toBe(true);
     });
   });
 
@@ -529,37 +529,37 @@ describe('Coverage Gap Fillers', () => {
       const classifier = new IntentClassifier();
       const result = classifier.classify('value between 10 and 20');
       // RANGE should be the primary intent due to boost
-      expect(result.intents.some(i => i.intent === 'RANGE')).toBe(true);
+      expect(result.intents.some((i) => i.intent === 'RANGE')).toBe(true);
     });
 
     it('boosts TYPE_CHECK for instanceof pattern', () => {
       const classifier = new IntentClassifier();
       const result = classifier.classify('var instanceof T(String)');
-      expect(result.intents.some(i => i.intent === 'TYPE_CHECK')).toBe(true);
+      expect(result.intents.some((i) => i.intent === 'TYPE_CHECK')).toBe(true);
     });
 
     it('boosts TYPE_CHECK for 是否是...类型 pattern', () => {
       const classifier = new IntentClassifier();
       const result = classifier.classify('变量是否是String类型');
-      expect(result.intents.some(i => i.intent === 'TYPE_CHECK')).toBe(true);
+      expect(result.intents.some((i) => i.intent === 'TYPE_CHECK')).toBe(true);
     });
 
     it('boosts PROJECTION for 每个 pattern', () => {
       const classifier = new IntentClassifier();
       const result = classifier.classify('每个项目的名称');
-      expect(result.intents.some(i => i.intent === 'PROJECTION')).toBe(true);
+      expect(result.intents.some((i) => i.intent === 'PROJECTION')).toBe(true);
     });
 
     it('boosts COLLECTION for isEmpty/.isEmpty keywords', () => {
       const classifier = new IntentClassifier();
       const result = classifier.classify('myList.isEmpty()');
-      expect(result.intents.some(i => i.intent === 'COLLECTION')).toBe(true);
+      expect(result.intents.some((i) => i.intent === 'COLLECTION')).toBe(true);
     });
 
     it('boosts COLLECTION for 列表 keyword', () => {
       const classifier = new IntentClassifier();
       const result = classifier.classify('订单列表');
-      expect(result.intents.some(i => i.intent === 'COLLECTION')).toBe(true);
+      expect(result.intents.some((i) => i.intent === 'COLLECTION')).toBe(true);
     });
   });
 

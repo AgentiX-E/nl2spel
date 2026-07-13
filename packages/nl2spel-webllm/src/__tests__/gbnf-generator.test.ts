@@ -171,7 +171,7 @@ describe('GBNFGenerator', () => {
     it('structured output should have named sections', () => {
       const gen = new GBNFGenerator();
       const struct = gen.generateStructured();
-      const sectionNames = struct.sections.map(s => s.name);
+      const sectionNames = struct.sections.map((s) => s.name);
       expect(sectionNames).toContain('Lexical rules');
       expect(sectionNames).toContain('Numbers');
     });
@@ -198,8 +198,8 @@ describe('GBNFGenerator', () => {
       const grammar = gen.generate();
       const rules = grammar
         .split('\n')
-        .filter(l => l.includes('::='))
-        .map(l => l.split('::=')[0]!.trim());
+        .filter((l) => l.includes('::='))
+        .map((l) => l.split('::=')[0]!.trim());
 
       for (const rule of rules) {
         // Rule names must match [a-zA-Z_][a-zA-Z0-9_-]*

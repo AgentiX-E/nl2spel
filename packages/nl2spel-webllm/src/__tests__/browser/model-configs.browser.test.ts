@@ -31,7 +31,7 @@ const wrappedSource = `
 
 test.describe('MODEL_CONFIGS (real browser)', () => {
   test('recommendModel works in browser context', async ({ page }) => {
-    const result = await page.evaluate(source => {
+    const result = await page.evaluate((source) => {
       new Function(source)();
       return {
         modelCount: Object.keys((window as any).MODEL_CONFIGS).length,
@@ -45,7 +45,7 @@ test.describe('MODEL_CONFIGS (real browser)', () => {
   });
 
   test('MODEL_CONFIGS structure is valid in browser', async ({ page }) => {
-    const result = await page.evaluate(source => {
+    const result = await page.evaluate((source) => {
       new Function(source)();
       const configs = (window as any).MODEL_CONFIGS;
       const errors: string[] = [];

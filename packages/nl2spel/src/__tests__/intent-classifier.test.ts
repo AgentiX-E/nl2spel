@@ -98,27 +98,27 @@ describe('IntentClassifier', () => {
   describe('IC-G03: PERMISSION_CHECK', () => {
     it('用户是管理员', () => {
       const r = classifier.classify('用户是管理员');
-      expect(r.intents.some(i => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
     });
 
     it('user has admin role', () => {
       const r = classifier.classify('user has admin role');
-      expect(r.intents.some(i => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
     });
 
     it('用户可以删除', () => {
       const r = classifier.classify('用户可以删除');
-      expect(r.intents.some(i => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
     });
 
     it('has permission to edit', () => {
       const r = classifier.classify('has permission to edit');
-      expect(r.intents.some(i => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
     });
 
     it('不允许操作', () => {
       const r = classifier.classify('不允许操作');
-      expect(r.intents.some(i => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
     });
   });
 
@@ -126,7 +126,7 @@ describe('IntentClassifier', () => {
   describe('IC-G04: LOGICAL', () => {
     it('金额大于100且已确认', () => {
       const r = classifier.classify('金额大于100且已确认');
-      expect(r.intents.some(i => i.intent === NLIntent.LOGICAL)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.LOGICAL)).toBe(true);
       expect(r.logicalConnectors).toContain('and');
     });
 
@@ -181,12 +181,12 @@ describe('IntentClassifier', () => {
 
     it('ends with .pdf', () => {
       const r = classifier.classify('ends with .pdf');
-      expect(r.intents.some(i => i.intent === NLIntent.STRING_MATCH)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.STRING_MATCH)).toBe(true);
     });
 
     it('正则匹配', () => {
       const r = classifier.classify('正则匹配');
-      expect(r.intents.some(i => i.intent === NLIntent.STRING_MATCH)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.STRING_MATCH)).toBe(true);
     });
   });
 
@@ -194,27 +194,27 @@ describe('IntentClassifier', () => {
   describe('IC-G06: COLLECTION', () => {
     it('订单列表数量大于10', () => {
       const r = classifier.classify('订单列表数量大于10');
-      expect(r.intents.some(i => i.intent === NLIntent.COLLECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.COLLECTION)).toBe(true);
     });
 
     it('list size > 5', () => {
       const r = classifier.classify('list size > 5');
-      expect(r.intents.some(i => i.intent === NLIntent.COLLECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.COLLECTION)).toBe(true);
     });
 
     it('列表为空', () => {
       const r = classifier.classify('列表为空');
-      expect(r.intents.some(i => i.intent === NLIntent.COLLECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.COLLECTION)).toBe(true);
     });
 
     it('items is empty', () => {
       const r = classifier.classify('items is empty');
-      expect(r.intents.some(i => i.intent === NLIntent.COLLECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.COLLECTION)).toBe(true);
     });
 
     it('集合包含VIP', () => {
       const r = classifier.classify('集合包含VIP');
-      expect(r.intents.some(i => i.intent === NLIntent.COLLECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.COLLECTION)).toBe(true);
     });
   });
 
@@ -240,17 +240,17 @@ describe('IntentClassifier', () => {
   describe('IC-G08: SELECTION', () => {
     it('所有符合条件的', () => {
       const r = classifier.classify('所有符合条件的');
-      expect(r.intents.some(i => i.intent === NLIntent.SELECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.SELECTION)).toBe(true);
     });
 
     it('第一个满足条件的', () => {
       const r = classifier.classify('第一个满足条件的');
-      expect(r.intents.some(i => i.intent === NLIntent.SELECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.SELECTION)).toBe(true);
     });
 
     it('filter matching items', () => {
       const r = classifier.classify('filter matching items');
-      expect(r.intents.some(i => i.intent === NLIntent.SELECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.SELECTION)).toBe(true);
     });
   });
 
@@ -268,7 +268,7 @@ describe('IntentClassifier', () => {
 
     it('所有商品的价格', () => {
       const r = classifier.classify('所有商品的价格');
-      expect(r.intents.some(i => i.intent === NLIntent.PROJECTION)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.PROJECTION)).toBe(true);
     });
   });
 
@@ -384,12 +384,12 @@ describe('IntentClassifier', () => {
 
     it('用户拥有管理员角色', () => {
       const r = classifier.classify('用户拥有管理员角色');
-      expect(r.intents.some(i => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.PERMISSION_CHECK)).toBe(true);
     });
 
     it('订单状态不是已取消', () => {
       const r = classifier.classify('订单状态不是已取消');
-      expect(r.intents.some(i => i.intent === NLIntent.LOGICAL)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.LOGICAL)).toBe(true);
     });
 
     it('备注包含加急', () => {
@@ -416,14 +416,14 @@ describe('IntentClassifier', () => {
       // Full-width Ｇ (U+FF27) → half-width G (U+0047)
       const r = classifier.classify('ａｂｃ greater than ５０');
       expect(r.primaryIntent).toBe(NLIntent.COMPARISON);
-      expect(r.entities.some(e => e.text === '50')).toBe(true);
+      expect(r.entities.some((e) => e.text === '50')).toBe(true);
     });
 
     it('should trim whitespace and normalize internal spaces', () => {
       const r = classifier.classify('  金额  大于  1000  ');
       expect(r.primaryIntent).toBe(NLIntent.COMPARISON);
       expect(r.operators).toContain('>');
-      const nums = r.entities.filter(e => e.type === 'value' && !isNaN(Number(e.text)));
+      const nums = r.entities.filter((e) => e.type === 'value' && !isNaN(Number(e.text)));
       expect(nums[0]!.text).toBe('1000');
     });
 
@@ -432,7 +432,7 @@ describe('IntentClassifier', () => {
       const r = classifier.classify('AMOUNT GREATER Than 500');
       expect(r.primaryIntent).toBe(NLIntent.COMPARISON);
       // English word "greater" maps to COMPARISON intent but not to the '>' operator
-      expect(r.intents.some(i => i.intent === NLIntent.COMPARISON)).toBe(true);
+      expect(r.intents.some((i) => i.intent === NLIntent.COMPARISON)).toBe(true);
     });
   });
 
@@ -440,20 +440,20 @@ describe('IntentClassifier', () => {
   describe('Entity Extraction', () => {
     it('should extract numeric entities', () => {
       const r = classifier.classify('金额大于1000');
-      const nums = r.entities.filter(e => e.type === 'value' && !isNaN(Number(e.text)));
+      const nums = r.entities.filter((e) => e.type === 'value' && !isNaN(Number(e.text)));
       expect(nums.length).toBeGreaterThan(0);
       expect(nums[0]!.text).toBe('1000');
     });
 
     it('should extract decimal values', () => {
       const r = classifier.classify('price > 99.99');
-      const nums = r.entities.filter(e => e.type === 'value' && !isNaN(Number(e.text)));
-      expect(nums.some(e => e.text === '99.99')).toBe(true);
+      const nums = r.entities.filter((e) => e.type === 'value' && !isNaN(Number(e.text)));
+      expect(nums.some((e) => e.text === '99.99')).toBe(true);
     });
 
     it('should extract multiple numeric values', () => {
       const r = classifier.classify('金额在100到500之间');
-      const nums = r.entities.filter(e => e.type === 'value' && !isNaN(Number(e.text)));
+      const nums = r.entities.filter((e) => e.type === 'value' && !isNaN(Number(e.text)));
       expect(nums.length).toBeGreaterThanOrEqual(2);
     });
   });
