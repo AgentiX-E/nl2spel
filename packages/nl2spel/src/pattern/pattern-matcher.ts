@@ -1,4 +1,4 @@
-import type { PatternDefinition, SlotDefinition } from './pattern-definition.js';
+import type { PatternDefinition } from './pattern-definition.js';
 import { ChineseNumberParser } from '../utils/chinese-number-parser.js';
 
 export interface PatternMatchResult {

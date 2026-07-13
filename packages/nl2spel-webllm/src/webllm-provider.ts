@@ -5,9 +5,7 @@ import type {
   LLMGenerateOptions,
   LLMResponse,
   LLMStreamChunk,
-  ContextSchema,
 } from '@agentix-e/nl2spel';
-import { GBNFGenerator } from './gbnf-generator.js';
 import { MODEL_CONFIGS, type ModelConfig } from './model-configs.js';
 
 export interface WebLLMConfig {
@@ -47,7 +45,6 @@ export class WebLLMProvider implements LLMProvider {
 
   private readonly config: WebLLMConfig;
   private readonly modelConfig: ModelConfig;
-  private readonly gbnfGenerator: GBNFGenerator;
 
   private _engine: unknown = null;
   private _initialized = false;
@@ -64,8 +61,6 @@ export class WebLLMProvider implements LLMProvider {
       ...(MODEL_CONFIGS[config.model] ?? MODEL_CONFIGS['gemma-2-2b-it']!),
       ...config.customModelConfig,
     };
-
-    this.gbnfGenerator = new GBNFGenerator({ injectContext: true });
 
     this.capabilities = {
       maxContextTokens: this.modelConfig.maxContextTokens,

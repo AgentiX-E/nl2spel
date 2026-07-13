@@ -1,13 +1,10 @@
 import { PatternMatcher } from '../pattern/pattern-matcher.js';
-import type { PatternMatchResult } from '../pattern/pattern-matcher.js';
 import { BUILTIN_PATTERNS } from '../pattern/builtin-patterns.js';
 import { IntentClassifier } from '../template/intent-classifier.js';
-import type { IntentResult } from '../template/intent-classifier.js';
 import { TemplateEngine } from '../template/template-engine.js';
 import type { TemplateResult } from '../template/template-engine.js';
 import { PromptBuilder } from '../template/prompts/prompt-builder.js';
 import { ProviderRegistry } from '../provider/provider-registry.js';
-import type { LLMProvider, LLMPrompt } from '../provider/llm-provider.js';
 import type { ContextSchema, SpelEvaluator } from '@agentix-e/spel-ts';
 import { ValidationPipeline } from '../validation/validation-pipeline.js';
 import { AutoFixer } from '../validation/auto-fixer.js';

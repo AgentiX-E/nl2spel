@@ -1,14 +1,10 @@
 import { StrategyRouter, type StrategyRouterConfig } from '../strategy/strategy-router.js';
-import type { StrategyResult } from '../strategy/strategy-router.js';
 import { ProviderRegistry } from '../provider/provider-registry.js';
 import type { LLMProvider } from '../provider/llm-provider.js';
-import { PatternMatcher } from '../pattern/pattern-matcher.js';
 import type { PatternDefinition } from '../pattern/pattern-definition.js';
 import { IntentClassifier } from '../template/intent-classifier.js';
-import type { IntentResult } from '../template/intent-classifier.js';
 import { ContextExtractor } from '../context/context-extractor.js';
 import type { ContextSchema, SpelEvaluator } from '@agentix-e/spel-ts';
-import { ValidationPipeline } from '../validation/validation-pipeline.js';
 
 export interface GenerateOptions {
   /** Context Schema (optional) */

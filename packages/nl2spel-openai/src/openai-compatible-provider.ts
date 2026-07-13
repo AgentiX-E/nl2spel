@@ -6,9 +6,33 @@ import {
   type LLMResponse,
   type LLMStreamChunk,
   PromptBuilder,
-  type ContextSchema,
 } from '@agentix-e/nl2spel';
 import { PROVIDER_PRESETS, type ProviderPreset } from './provider-presets.js';
+
+interface ChatCompletionResponse {
+  id?: string;
+  object?: string;
+  created?: number;
+  model: string;
+  choices?: Array<{
+    index?: number;
+    message?: {
+      role?: string;
+      content?: string | null;
+    };
+    finish_reason?: string | null;
+  }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+  error?: {
+    message?: string;
+    type?: string;
+    code?: string;
+  };
+}
 
 export interface OpenAICompatibleConfig {
   /** Predefined provider name (openai/deepseek/glm/copilot/hunyuan/minimax/kimi) */
@@ -154,7 +178,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           timeout,
         );
 
-        const data = (await response.json()) as any;
+        const data = (await response.json()) as ChatCompletionResponse;
 
         if (!response.ok) {
           const errorMsg = data?.error?.message ?? `HTTP ${response.status}`;
@@ -172,7 +196,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
             totalTokens: data.usage?.total_tokens ?? 0,
           },
           latencyMs: Date.now() - startTime,
-          finishReason: choice!.finish_reason,
+          finishReason: (choice!.finish_reason ?? 'stop') as LLMResponse['finishReason'],
           providerName: this.name,
         };
       } catch (err) {

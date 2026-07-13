@@ -18,6 +18,12 @@ export default defineConfig({
         'src/provider/llm-provider.ts',
         'src/pattern/pattern-definition.ts',
       ],
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      },
     },
   },
 });

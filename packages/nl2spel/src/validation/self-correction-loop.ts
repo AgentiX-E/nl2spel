@@ -1,5 +1,5 @@
-import type { LLMProvider, LLMPrompt, LLMResponse } from '../provider/llm-provider.js';
-import { ValidationPipeline, type ValidationResult } from './validation-pipeline.js';
+import type { LLMPrompt, LLMResponse } from '../provider/llm-provider.js';
+import { ValidationPipeline } from './validation-pipeline.js';
 import { AutoFixer } from './auto-fixer.js';
 import type { ContextSchema } from '@agentix-e/spel-ts';
 
