@@ -18,7 +18,7 @@ Full API documentation → [nl2spel API](https://agentix-e.github.io/nl2spel/api
 ```typescript
 import {
   NL2SpelEngine,        // Main engine
-  PatternMatcher,       // Layer 0: Pattern matching (48+ built-in patterns)
+  PatternMatcher,       // Layer 0: Pattern matching (63 built-in patterns)
   IntentClassifier,     // Layer 1: Intent classification (15 NLIntent types)
   TemplateEngine,       // Layer 1: Template filling (15 template categories)
   PromptBuilder,        // Layer 2: LLM Prompt construction
@@ -38,7 +38,7 @@ import {
 ```
 NL2SpelEngine
 ├── StrategyRouter          (Three-layer strategy routing)
-│   ├── Layer 0: PatternMatcher    (35+ built-in patterns, P99 < 1ms)
+│   ├── Layer 0: PatternMatcher    (63 built-in patterns, P99 < 1ms)
 │   ├── Layer 1: TemplateEngine    (15 intents, 15 template categories)
 │   └── Layer 2: LLMProvider       (Pluggable, via ProviderRegistry)
 ├── ValidationPipeline      (Parse → Type → Semantic → Context)
@@ -71,5 +71,11 @@ console.log(result.strategy);    // pattern
 | Validation pipeline | < 5ms |
 
 ## License
+
+Built on [@agentix-e/spel-ts](https://github.com/AgentiX-E/spel-ts) — pure TypeScript SpEL evaluator.
+
+## Ecosystem
+- [@agentix-e/spel-ts](https://github.com/AgentiX-E/spel-ts) — SpEL parser and evaluator
+- [@agentix-e/spel-editor](https://github.com/AgentiX-E/spel-editor) — Web-embeddable SpEL editor
 
 MIT © 2025 Agentix-E

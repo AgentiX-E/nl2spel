@@ -28,7 +28,7 @@
               ┌─────────────▼─┐  ┌──▼───┐  ┌▼──────────┐
               │  Layer 0      │  │Layer1│  │  Layer 2   │
               │  Pattern Match │  │ Templ│  │  LLM API   │
-              │  (48+ patterns)│  │ (15  │  │  (7 presets│
+              │  (63 patterns) │  │ (15  │  │  (7 presets│
               │  < 1ms P99     │  │intents│  │  + custom) │
               └────────────────┘  └──────┘  └────────────┘
                                                     │
@@ -147,5 +147,11 @@ pnpm lint
 ```
 
 ## License
+
+Built on [@agentix-e/spel-ts](https://github.com/AgentiX-E/spel-ts) — pure TypeScript SpEL evaluator.
+
+## Ecosystem
+- [@agentix-e/spel-ts](https://github.com/AgentiX-E/spel-ts) — SpEL parser and evaluator
+- [@agentix-e/spel-editor](https://github.com/AgentiX-E/spel-editor) — Web-embeddable SpEL editor
 
 MIT © 2025 Agentix-E

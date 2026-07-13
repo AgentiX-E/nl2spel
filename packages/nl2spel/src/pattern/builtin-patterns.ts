@@ -1,7 +1,7 @@
 import type { PatternDefinition } from './pattern-definition.js';
 
 /**
- * Built-in pattern library — covers ≥80% Easy scenarios, ≥35 PatternDefinitions.
+ * Built-in pattern library — covers ≥80% Easy scenarios, 63 PatternDefinitions.
  *
  * Core design:
  * 1. All patterns use named capture groups `(?<field>…)` or `(?<value>…)` to extract parameters
