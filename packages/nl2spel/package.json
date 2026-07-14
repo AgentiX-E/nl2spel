@@ -32,7 +32,7 @@
   "devDependencies": {
     "@agentix-e/spel-ts": "^1.1.0",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^3.0.0"
   },
   "keywords": ["spel", "nlp", "expression-language", "spring", "nl2code", "agentix"],
   "license": "MIT",

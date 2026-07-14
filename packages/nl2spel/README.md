@@ -2,7 +2,7 @@
 
 > Natural Language → SpEL Core Engine
 >
-> Zero external deps · Four-layer hybrid architecture · 527 tests · Chinese & English
+> Zero external deps · Four-layer hybrid architecture · 532 tests · Chinese & English
 
 [![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel)](https://www.npmjs.com/package/@agentix-e/nl2spel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)

@@ -43,7 +43,7 @@
 
 | Package | Description | Tests | Dependencies |
 |---|------|------|------|
-| [`@agentix-e/nl2spel`](./packages/nl2spel/README.md) | Core Engine | 527 | Zero external deps |
+| [`@agentix-e/nl2spel`](./packages/nl2spel/README.md) | Core Engine | 532 | Zero external deps |
 | [`@agentix-e/nl2spel-openai`](./packages/nl2spel-openai/README.md) | LLM API Provider | 55 | core |
 | [`@agentix-e/nl2spel-webllm`](./packages/nl2spel-webllm/README.md) | Browser-local LLM | 68 | core |
 

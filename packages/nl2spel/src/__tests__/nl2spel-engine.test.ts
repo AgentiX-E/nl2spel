@@ -285,6 +285,34 @@ describe('NL2SpelEngine', () => {
 
       expect(() => engine.setSpelEvaluator(mockEvaluator)).not.toThrow();
     });
+
+    // Coverage: nl2spel-engine.ts lines 165-167 — evaluator contextSchema fallback
+    // Also covers line 190 (setContext called with truthy contextSchema)
+    it('should use evaluator contextSchema when no explicit schema is provided', async () => {
+      const engine = new NL2SpelEngine();
+      engine.setSpelEvaluator({
+        parse: vi.fn().mockReturnValue({ valid: true, errors: [] }),
+        getContextSchema: vi.fn().mockResolvedValue({
+          root: {
+            name: 'order',
+            type: 'Order',
+            fields: { amount: { type: 'number' as const } },
+            methods: {},
+          },
+          variables: {},
+          beans: {},
+          types: {},
+          functions: {},
+        }),
+      });
+      engine.registerProvider(createMockLLMProvider('test-llm', '#order.amount > 500'));
+
+      // No explicit contextSchema — falls back to evaluator instance (lines 165-167)
+      // Do not use offlineOnly so we exercise the non-offline path too
+      const result = await engine.generate('filter orders where amount exceeds 500');
+      expect(result.expression).toBeTruthy();
+      expect(result.strategy).toBeTruthy();
+    });
   });
 
   // ===== explain() with patternMatched =====

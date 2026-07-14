@@ -189,6 +189,28 @@ describe('ProviderRegistry', () => {
       expect(prioritized).toHaveLength(0);
     });
 
+    // Coverage: both providers offline → line 48 short-circuit (!aOffline=false)
+    it('should sort two offline providers by cost then latency', async () => {
+      const registry = new ProviderRegistry();
+      const slow = createMockProvider('offline-slow', {
+        offlineAvailable: true,
+        estimatedCostPerRequest: 0.001,
+        estimatedLatencyMs: 200,
+      });
+      const fast = createMockProvider('offline-fast', {
+        offlineAvailable: true,
+        estimatedCostPerRequest: 0.001,
+        estimatedLatencyMs: 50,
+      });
+
+      registry.register(slow);
+      registry.register(fast);
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized[0]!.name).toBe('offline-fast');
+      expect(prioritized[1]!.name).toBe('offline-slow');
+    });
+
     // Coverage: neither provider offline → skip line 46, exercise cost tie-breaker
     it('should sort by cost when neither provider is offline (line 46 skip)', async () => {
       const registry = new ProviderRegistry();

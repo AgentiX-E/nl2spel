@@ -563,6 +563,87 @@ describe('Coverage Gap Fillers', () => {
     });
   });
 
+  // ===== provider-registry.ts: both offline (covers line 48 short-circuit) =====
+  describe('provider-registry: both offline providers', () => {
+    it('sorts two offline providers by cost then latency', async () => {
+      const registry = new ProviderRegistry();
+      const slowOffline: LLMProvider = {
+        name: 'slow-offline',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: true,
+          estimatedCostPerRequest: 0.001,
+          estimatedLatencyMs: 200,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const fastOffline: LLMProvider = {
+        name: 'fast-offline',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: true,
+          estimatedCostPerRequest: 0.001,
+          estimatedLatencyMs: 50,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(slowOffline);
+      registry.register(fastOffline);
+      const prioritized = await registry.getPrioritized();
+      // Both offline, same cost → sorted by latency (lower first)
+      expect(prioritized).toHaveLength(2);
+      expect(prioritized[0]!.name).toBe('fast-offline');
+      expect(prioritized[1]!.name).toBe('slow-offline');
+    });
+
+    it('sorts two offline providers with different costs', async () => {
+      const registry = new ProviderRegistry();
+      const expensiveOffline: LLMProvider = {
+        name: 'expensive-offline',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: true,
+          estimatedCostPerRequest: 0.01,
+          estimatedLatencyMs: 50,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const cheapOffline: LLMProvider = {
+        name: 'cheap-offline',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: true,
+          estimatedCostPerRequest: 0.0001,
+          estimatedLatencyMs: 200,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(expensiveOffline);
+      registry.register(cheapOffline);
+      const prioritized = await registry.getPrioritized();
+      // Both offline → sorted by cost (cheaper first)
+      expect(prioritized).toHaveLength(2);
+      expect(prioritized[0]!.name).toBe('cheap-offline');
+      expect(prioritized[1]!.name).toBe('expensive-offline');
+    });
+  });
+
   // ===== provider-registry.ts: same offline & same cost (lines 46, 49-50) =====
   describe('provider-registry: same offline and same cost sorting', () => {
     it('sorts by latency when both have same offline and same cost', async () => {
@@ -638,6 +719,62 @@ describe('Coverage Gap Fillers', () => {
       const prioritized = await registry.getPrioritized();
       // Provider with cost (0.0001) < Infinity → with-cost first
       expect(prioritized[0]!.name).toBe('with-cost');
+    });
+
+    // Three providers with same offline status, escalating costs,
+    // to exercise all sort comparison paths
+    it('sorts three providers with same offline status by cost then latency', async () => {
+      const registry = new ProviderRegistry();
+      const high: LLMProvider = {
+        name: 'high-cost',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.005,
+          estimatedLatencyMs: 100,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const mid: LLMProvider = {
+        name: 'mid-cost',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.003,
+          estimatedLatencyMs: 50,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const low: LLMProvider = {
+        name: 'low-cost',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+          estimatedCostPerRequest: 0.001,
+          estimatedLatencyMs: 200,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(high);
+      registry.register(mid);
+      registry.register(low);
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized).toHaveLength(3);
+      expect(prioritized[0]!.name).toBe('low-cost');
+      expect(prioritized[1]!.name).toBe('mid-cost');
+      expect(prioritized[2]!.name).toBe('high-cost');
     });
   });
 });
