@@ -72,13 +72,21 @@ export class ContextExtractor {
   /**
    * Extract object fields
    */
-  private extractFields(obj: Record<string, unknown>, depth = 0): Record<string, FieldSchema> {
+  /**
+   * Recursively extract fields from an object, following nested objects
+   * all the way to leaf values. Uses a visited set to prevent circular references.
+   */
+  private extractFields(
+    obj: Record<string, unknown>,
+    visited: WeakSet<object> = new WeakSet(),
+  ): Record<string, FieldSchema> {
     if (obj === null || obj === undefined || typeof obj !== 'object') {
       return {};
     }
 
-    // Prevent infinite recursion
-    if (depth > 3) return {};
+    // Prevent infinite recursion on circular references
+    if (visited.has(obj as object)) return {};
+    visited.add(obj as object);
 
     const fields: Record<string, FieldSchema> = {};
 
@@ -100,9 +108,9 @@ export class ContextExtractor {
           example: this.safeExample(value),
         };
 
-        // Recursively extract nested object fields
+        // Recursively extract nested object fields — follows all the way down
         if (isObject) {
-          field.fields = this.extractFields(value as Record<string, unknown>, depth + 1);
+          field.fields = this.extractFields(value as Record<string, unknown>, visited);
         }
 
         fields[key] = field;

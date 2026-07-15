@@ -484,22 +484,21 @@ describe('ContextExtractor — recursive nested extraction', () => {
     expect(schema.root?.fields?.details?.fields?.flags?.type).toBe('array');
   });
 
-  it('stops recursion at depth 3', () => {
+  it('extracts deeply nested objects to the bottom', () => {
     const deepObj = {
-      l1: {
-        l2: {
-          l3: {
-            l4: { tooDeep: 'should not appear' },
-          },
-        },
-      },
+      l1: { l2: { l3: { l4: { deepest: 'reached' } } } },
     };
     const schema = extractor.extract({ rootObject: deepObj });
-    const l1 = schema.root?.fields?.l1?.fields;
-    const l2 = l1?.l2?.fields;
-    const l3 = l2?.l3?.fields;
-    // l4 IS extracted as object type, but nested fields are empty (depth > 3)
+    const l3 = schema.root?.fields?.l1?.fields?.l2?.fields?.l3?.fields;
     expect(l3?.l4?.type).toBe('object');
-    expect(Object.keys(l3?.l4?.fields ?? {}).length).toBe(0);
+    expect(l3?.l4?.fields?.deepest?.type).toBe('string');
+  });
+
+  it('detects circular reference without infinite recursion', () => {
+    const obj: Record<string, unknown> = { name: 'root' };
+    obj.self = obj;
+    const schema = extractor.extract({ rootObject: obj });
+    expect(schema.root?.fields?.name?.type).toBe('string');
+    expect(Object.keys(schema.root?.fields?.self?.fields ?? {}).length).toBe(0);
   });
 });
