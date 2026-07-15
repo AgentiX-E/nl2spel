@@ -453,8 +453,20 @@ export class TemplateEngine {
     const unfilledMatches = expression.matchAll(/\{(\w+)\}/g);
     for (const m of unfilledMatches) {
       const slot = m[1]!;
-      unfilledSlots.push(slot);
-      expression = expression.replace(new RegExp(`\\{${slot}\\}`, 'g'), `\${${slot}}`);
+      const defaults: Record<string, string> = {
+        operator: '==',
+        operator1: '==',
+        operator2: '==',
+        logic: 'and',
+        conditionOp: '==',
+      };
+      // Only fill with defaults in offline mode; keep as ${...} for LLM to handle
+      if (defaults[slot]) {
+        expression = expression.replace(new RegExp(`\\{${slot}\\}`, 'g'), defaults[slot]!);
+      } else {
+        unfilledSlots.push(slot);
+        expression = expression.replace(new RegExp(`\\{${slot}\\}`, 'g'), `\${${slot}}`);
+      }
     }
 
     return { expression, unfilledSlots };
