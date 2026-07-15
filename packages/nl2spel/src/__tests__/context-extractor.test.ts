@@ -406,3 +406,100 @@ describe('ContextExtractor', () => {
     });
   });
 });
+
+// ====================================================================
+// Recursive extraction tests — nested objects
+// ====================================================================
+describe('ContextExtractor — recursive nested extraction', () => {
+  const extractor = new ContextExtractor();
+
+  it('extracts single-level object fields', () => {
+    const schema = extractor.extract({
+      rootObject: { amount: 100, status: 'active' },
+    });
+    expect(schema.root?.fields?.amount.type).toBe('number');
+    expect(schema.root?.fields?.status.type).toBe('string');
+  });
+
+  it('extracts nested object fields recursively', () => {
+    const schema = extractor.extract({
+      rootObject: {
+        order: {
+          amount: 500,
+          customer: {
+            name: 'Alice',
+            tier: 'premium',
+            address: {
+              city: 'Beijing',
+              zip: '100000',
+            },
+          },
+        },
+      },
+    });
+    const order = schema.root?.fields?.order;
+    expect(order?.type).toBe('object');
+    expect(order?.fields?.amount?.type).toBe('number');
+    expect(order?.fields?.customer?.type).toBe('object');
+    expect(order?.fields?.customer?.fields?.name?.type).toBe('string');
+    expect(order?.fields?.customer?.fields?.tier?.type).toBe('string');
+    expect(order?.fields?.customer?.fields?.address?.type).toBe('object');
+    expect(order?.fields?.customer?.fields?.address?.fields?.city?.type).toBe('string');
+    expect(order?.fields?.customer?.fields?.address?.fields?.zip?.type).toBe('string');
+  });
+
+  it('extracts arrays with elementType', () => {
+    const schema = extractor.extract({
+      rootObject: { tags: ['urgent', 'review'] },
+    });
+    expect(schema.root?.fields?.tags?.type).toBe('array');
+    expect(schema.root?.fields?.tags?.elementType).toBe('string');
+    expect(schema.root?.fields?.tags?.isCollection).toBe(true);
+  });
+
+  it('extracts null fields correctly', () => {
+    const schema = extractor.extract({
+      rootObject: { optionalField: null },
+    });
+    expect(schema.root?.fields?.optionalField?.nullable).toBe(true);
+  });
+
+  it('extracts mixed nested and flat fields', () => {
+    const schema = extractor.extract({
+      rootObject: {
+        id: 1,
+        name: 'Order',
+        details: {
+          priority: 'high',
+          flags: ['expedited'],
+        },
+        total: 99.99,
+      },
+    });
+    expect(schema.root?.fields?.id?.type).toBe('number');
+    expect(schema.root?.fields?.name?.type).toBe('string');
+    expect(schema.root?.fields?.total?.type).toBe('number');
+    expect(schema.root?.fields?.details?.type).toBe('object');
+    expect(schema.root?.fields?.details?.fields?.priority?.type).toBe('string');
+    expect(schema.root?.fields?.details?.fields?.flags?.type).toBe('array');
+  });
+
+  it('stops recursion at depth 3', () => {
+    const deepObj = {
+      l1: {
+        l2: {
+          l3: {
+            l4: { tooDeep: 'should not appear' },
+          },
+        },
+      },
+    };
+    const schema = extractor.extract({ rootObject: deepObj });
+    const l1 = schema.root?.fields?.l1?.fields;
+    const l2 = l1?.l2?.fields;
+    const l3 = l2?.l3?.fields;
+    // l4 IS extracted as object type, but nested fields are empty (depth > 3)
+    expect(l3?.l4?.type).toBe('object');
+    expect(Object.keys(l3?.l4?.fields ?? {}).length).toBe(0);
+  });
+});

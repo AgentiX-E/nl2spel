@@ -72,26 +72,40 @@ export class ContextExtractor {
   /**
    * Extract object fields
    */
-  private extractFields(obj: Record<string, unknown>): Record<string, FieldSchema> {
+  private extractFields(obj: Record<string, unknown>, depth = 0): Record<string, FieldSchema> {
     if (obj === null || obj === undefined || typeof obj !== 'object') {
       return {};
     }
+
+    // Prevent infinite recursion
+    if (depth > 3) return {};
 
     const fields: Record<string, FieldSchema> = {};
 
     for (const key of Object.keys(obj)) {
       try {
-        const value = (obj as any)[key];
+        const value = (obj as Record<string, unknown>)[key];
         const fieldType = this.inferSpelType(value);
+        const isArray = Array.isArray(value);
+        const isObject =
+          !isArray && typeof value === 'object' && value !== null && !(value instanceof Date);
 
-        fields[key] = {
+        const field: FieldSchema = {
           type: fieldType,
           description: this.generateDescription(key, fieldType),
-          isCollection: Array.isArray(value),
-          elementType: Array.isArray(value) && value.length > 0 ? typeof value[0] : undefined,
+          isCollection: isArray,
+          elementType:
+            isArray && (value as unknown[]).length > 0 ? typeof (value as unknown[])[0] : undefined,
           nullable: value === null,
           example: this.safeExample(value),
         };
+
+        // Recursively extract nested object fields
+        if (isObject) {
+          field.fields = this.extractFields(value as Record<string, unknown>, depth + 1);
+        }
+
+        fields[key] = field;
       } catch {
         // Skip inaccessible properties
       }
