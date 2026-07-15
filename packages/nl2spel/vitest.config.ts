@@ -19,8 +19,8 @@ export default defineConfig({
         'src/pattern/pattern-definition.ts',
       ],
       thresholds: {
-        statements: 90,
-        branches: 85,
+        statements: 95,
+        branches: 95,
         functions: 90,
         lines: 90,
       },
