@@ -9,7 +9,19 @@
 [![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel)](https://www.npmjs.com/package/@agentix-e/nl2spel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## What is NL2SpEL?
+
+**NL2SpEL** converts natural language input (Chinese or English) into valid Spring Expression Language (SpEL) expressions. It uses a **four-layer hybrid engine** that cascades through Pattern Matching (63 bilingual patterns, < 1ms P99), Semantic Templates (15 intent types), LLM API (7 preset providers + custom), and optional browser-local WebLLM inference — always choosing the fastest, most accurate strategy available.
+
+### When should I use it?
+
+- You're building a **no-code / low-code** platform that needs expression generation from user text
+- You want to **bridge natural language and SpEL** in a rules engine, workflow builder, or chatbot
+- You need **offline-first** expression generation (Layers 0–1 require zero network calls)
+- You want **multi-LLM flexibility** — swap between DeepSeek, OpenAI, GLM, Copilot, or run fully local in the browser
+
 ---
+
 
 ## Architecture Overview
 
@@ -136,6 +148,24 @@ console.log(explanation.strategy);   // "pattern" | "template" | "llm-api"
 | Easy | 50 | 80% | 10% | 5% | ≥ 95% |
 | Medium | 70 | — | 60% | 28% | ≥ 88% |
 | Hard | 30 | — | — | 80% | ≥ 80% |
+
+## FAQ
+
+### What SpEL features can NL2SpEL generate?
+NL2SpEL generates expressions covering comparisons, logical operators, collection selection/projection, method invocation, and type references. Simple patterns (> 63 bilingual) are matched offline; complex multi-clause expressions are routed to the LLM layer.
+
+### Do I need an API key?
+No — for Layers 0–1 (pattern matching and semantic templates). API keys are only needed for Layer 2 (LLM API providers like DeepSeek, OpenAI) and Layer 3 (WebLLM is fully local with WebGPU acceleration).
+
+### Can I run it entirely offline in the browser?
+Yes. Combine `@agentix-e/nl2spel` (offline patterns + templates) with `@agentix-e/nl2spel-webllm` (local Gemma/Phi models via WebGPU) for a fully offline, no-data-leaves-browser experience.
+
+### How accurate is it?
+| Difficulty | Combined Target |
+|------------|-----------------|
+| Easy (50 tests) | ≥ 95% |
+| Medium (70 tests) | ≥ 88% |
+| Hard (30 tests) | ≥ 80% |
 
 ## Development
 
