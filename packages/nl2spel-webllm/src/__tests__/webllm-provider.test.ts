@@ -49,7 +49,7 @@ describe('WebLLMProvider', () => {
       expect(provider.capabilities.supportsGrammarConstraint).toBe(true);
       expect(provider.capabilities.supportsStreaming).toBe(true);
       expect(provider.capabilities.supportsStructuredOutput).toBe(false);
-      expect(provider.capabilities.estimatedCostPerRequest).toBe(0);
+      expect(provider.capabilities.costPreference).toBe(0);
     });
 
     it('should set correct maxContextTokens per model', () => {

@@ -31,7 +31,7 @@ export class ProviderRegistry {
 
   /**
    * Get available Providers sorted by priority.
-   * Sort rule: offline > low cost > low latency > high accuracy
+   * Sort rule: offline > lower cost preference > lower latency preference
    */
   public async getPrioritized(): Promise<LLMProvider[]> {
     const available: LLMProvider[] = [];
@@ -46,13 +46,13 @@ export class ProviderRegistry {
       const bOffline = b.capabilities.offlineAvailable;
       if (aOffline && !bOffline) return -1;
       if (!aOffline && bOffline) return 1;
-      // 2. Cheaper first
-      const costA = a.capabilities.estimatedCostPerRequest ?? Infinity;
-      const costB = b.capabilities.estimatedCostPerRequest ?? Infinity;
+      // 2. Lower cost preference first
+      const costA = a.capabilities.costPreference ?? Infinity;
+      const costB = b.capabilities.costPreference ?? Infinity;
       if (costA < costB) return -1;
       if (costB < costA) return 1;
-      // 3. Lower latency first
-      return a.capabilities.estimatedLatencyMs - b.capabilities.estimatedLatencyMs;
+      // 3. Lower latency preference first
+      return a.capabilities.latencyPreference - b.capabilities.latencyPreference;
     });
   }
 

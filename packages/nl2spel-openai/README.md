@@ -16,15 +16,15 @@
 
 ## Preset Providers (7)
 
-| Provider | Model | Cost/Request | Latency | Streaming |
-|----------|------|----------|------|------|
-| OpenAI | gpt-4o-mini | ~$0.0003 | 2s | ✅ |
-| DeepSeek | deepseek-chat | ~$0.0001 | 1.5s | ✅ |
-| GLM (Zhipu) | glm-4-flash | ~¥0.003 | 1.8s | ✅ |
-| Copilot | gpt-4o | Free | 2.5s | ✅ |
-| Hunyuan (Tencent) | hunyuan-lite | Free | 2s | ✅ |
-| MiniMax | abab6.5s-chat | ~$0.002 | 2.5s | ✅ |
-| Kimi | moonshot-v1-8k | ~$0.002 | 2s | ✅ |
+| Provider | Model | Context | Streaming |
+|----------|-------|---------|-----------|
+| OpenAI | gpt-4o-mini | 128K | ✅ |
+| DeepSeek | deepseek-chat | 64K | ✅ |
+| GLM (Zhipu) | glm-4-flash | 128K | ✅ |
+| Copilot | gpt-4o | 128K | ✅ |
+| Hunyuan (Tencent) | hunyuan-lite | 32K | ✅ |
+| MiniMax | abab6.5s-chat | 32K | ✅ |
+| Kimi | moonshot-v1-8k | 8K | ✅ |
 
 ## Quick Start
 

@@ -16,12 +16,12 @@
 
 ## Model Configurations (4)
 
-| Model | Context | VRAM | Speed | Quality |
-|------|-------|------|------|---------|
-| Qwen 2.5 1.5B | 32K | 1.5 GB | 30 tok/s | Low |
-| Gemma 2 2B | 8K | 2.0 GB | 25 tok/s | Low |
-| Phi-3 Mini 4K | 4K | 2.8 GB | 20 tok/s | Medium |
-| Llama 3.2 3B | 8K | 3.5 GB | 15 tok/s | High |
+| Model | Context | VRAM | Quantization |
+|-------|---------|------|--------------|
+| Qwen 2.5 1.5B | 32K | 1.5 GB | q4f16_1 |
+| Gemma 2 2B | 8K | 2.0 GB | q4f16_1 |
+| Phi-3 Mini 4K | 4K | 2.8 GB | q4f16_1 |
+| Llama 3.2 3B | 8K | 3.5 GB | q4f16_1 |
 
 ## Quick Start
 
@@ -71,15 +71,6 @@ const grammar = gen.generate({
 - WebGPU support (Chrome 113+, Edge 113+, Opera 99+)
 - Sufficient VRAM (≥ 1.5 GB)
 - HTTPS or localhost environment
-
-## Performance SLO
-
-| Metric | Target |
-|------|------|
-| Inference speed | ≥ 15 tok/s |
-| First load | ≤ 30s |
-| Memory usage | ≤ 3 GB |
-| GBNF grammar validity rate | 100% |
 
 ## License
 

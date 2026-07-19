@@ -6,8 +6,8 @@ function createMockProvider(
   name: string,
   overrides: Partial<{
     offlineAvailable: boolean;
-    estimatedCostPerRequest: number;
-    estimatedLatencyMs: number;
+    costPreference: number;
+    latencyPreference: number;
     isAvailable: boolean;
   }> = {},
 ): LLMProvider {
@@ -17,8 +17,8 @@ function createMockProvider(
     supportsStreaming: true,
     supportsStructuredOutput: true,
     offlineAvailable: overrides.offlineAvailable ?? false,
-    estimatedCostPerRequest: overrides.estimatedCostPerRequest ?? 0.0001,
-    estimatedLatencyMs: overrides.estimatedLatencyMs ?? 2000,
+    costPreference: overrides.costPreference ?? 0.0001,
+    latencyPreference: overrides.latencyPreference ?? 2000,
   };
 
   return {
@@ -137,11 +137,11 @@ describe('ProviderRegistry', () => {
     it('should prioritize lower cost providers second', async () => {
       const registry = new ProviderRegistry();
       const expensiveProvider = createMockProvider('openai', {
-        estimatedCostPerRequest: 0.001,
+        costPreference: 0.001,
         offlineAvailable: false,
       });
       const cheapProvider = createMockProvider('deepseek', {
-        estimatedCostPerRequest: 0.0001,
+        costPreference: 0.0001,
         offlineAvailable: false,
       });
 
@@ -156,13 +156,13 @@ describe('ProviderRegistry', () => {
     it('should prioritize lower latency when cost is equal', async () => {
       const registry = new ProviderRegistry();
       const slowProvider = createMockProvider('openai', {
-        estimatedCostPerRequest: 0.0001,
-        estimatedLatencyMs: 3000,
+        costPreference: 0.0001,
+        latencyPreference: 3000,
         offlineAvailable: false,
       });
       const fastProvider = createMockProvider('glm', {
-        estimatedCostPerRequest: 0.0001,
-        estimatedLatencyMs: 1000,
+        costPreference: 0.0001,
+        latencyPreference: 1000,
         offlineAvailable: false,
       });
 
@@ -194,13 +194,13 @@ describe('ProviderRegistry', () => {
       const registry = new ProviderRegistry();
       const slow = createMockProvider('offline-slow', {
         offlineAvailable: true,
-        estimatedCostPerRequest: 0.001,
-        estimatedLatencyMs: 200,
+        costPreference: 0.001,
+        latencyPreference: 200,
       });
       const fast = createMockProvider('offline-fast', {
         offlineAvailable: true,
-        estimatedCostPerRequest: 0.001,
-        estimatedLatencyMs: 50,
+        costPreference: 0.001,
+        latencyPreference: 50,
       });
 
       registry.register(slow);
@@ -215,11 +215,11 @@ describe('ProviderRegistry', () => {
     it('should sort by cost when neither provider is offline (line 46 skip)', async () => {
       const registry = new ProviderRegistry();
       const expensive = createMockProvider('openai', {
-        estimatedCostPerRequest: 0.01,
+        costPreference: 0.01,
         offlineAvailable: false,
       });
       const cheap = createMockProvider('gleam', {
-        estimatedCostPerRequest: 0.001,
+        costPreference: 0.001,
         offlineAvailable: false,
       });
 
@@ -235,18 +235,18 @@ describe('ProviderRegistry', () => {
     it('should sort by latency when three providers have same cost (covers line 49-50)', async () => {
       const registry = new ProviderRegistry();
       const slow = createMockProvider('openai', {
-        estimatedCostPerRequest: 0.001,
-        estimatedLatencyMs: 3000,
+        costPreference: 0.001,
+        latencyPreference: 3000,
         offlineAvailable: false,
       });
       const medium = createMockProvider('deepseek', {
-        estimatedCostPerRequest: 0.001,
-        estimatedLatencyMs: 2000,
+        costPreference: 0.001,
+        latencyPreference: 2000,
         offlineAvailable: false,
       });
       const fast = createMockProvider('glm', {
-        estimatedCostPerRequest: 0.001,
-        estimatedLatencyMs: 1000,
+        costPreference: 0.001,
+        latencyPreference: 1000,
         offlineAvailable: false,
       });
 

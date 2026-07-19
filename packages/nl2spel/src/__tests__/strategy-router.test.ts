@@ -16,8 +16,8 @@ function createMockLLMProvider(
       supportsStreaming: true,
       supportsStructuredOutput: true,
       offlineAvailable: false,
-      estimatedCostPerRequest: 0.001,
-      estimatedLatencyMs: 2000,
+      costPreference: 0.001,
+      latencyPreference: 2000,
     },
     generate: vi.fn().mockResolvedValue({
       text: responseText,

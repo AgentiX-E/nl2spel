@@ -70,12 +70,18 @@ export interface LLMCapabilities {
   offlineAvailable: boolean;
 
   /**
-   * Estimated cost per request (USD)
+   * Cost preference weight — used by ProviderRegistry for provider ordering.
+   * Lower values indicate preferred (cheaper) providers.
+   * NOT a price guarantee; pricing is controlled by the LLM service.
    */
-  estimatedCostPerRequest?: number;
+  costPreference?: number;
 
-  /** Estimated latency (ms) */
-  estimatedLatencyMs: number;
+  /**
+   * Latency preference weight — used by ProviderRegistry as secondary sort.
+   * Lower values indicate preferred (faster) providers.
+   * NOT a performance SLO; actual latency depends on network and service load.
+   */
+  latencyPreference: number;
 }
 
 // ============================================================

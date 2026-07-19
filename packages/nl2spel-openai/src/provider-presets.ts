@@ -14,10 +14,10 @@ export interface ProviderPreset {
   maxContextTokens: number;
   /** Whether streaming output is supported */
   supportsStreaming: boolean;
-  /** Estimated cost per request (USD) */
-  estimatedCostPerRequest: number;
-  /** Estimated latency (ms) */
-  estimatedLatencyMs: number;
+  /** Cost preference weight (lower = preferred for cost-based provider ordering) */
+  costPreference: number;
+  /** Latency preference weight (lower = preferred for latency-based provider ordering) */
+  latencyPreference: number;
   /** Default request headers */
   headers?: Record<string, string>;
   /** Whether structured output is supported */
@@ -31,8 +31,8 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     defaultModel: 'gpt-4o-mini',
     maxContextTokens: 128000,
     supportsStreaming: true,
-    estimatedCostPerRequest: 0.0003,
-    estimatedLatencyMs: 2000,
+    costPreference: 0.0003,
+    latencyPreference: 2000,
     supportsStructuredOutput: true,
   },
 
@@ -42,8 +42,8 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     defaultModel: 'deepseek-chat',
     maxContextTokens: 64000,
     supportsStreaming: true,
-    estimatedCostPerRequest: 0.0001,
-    estimatedLatencyMs: 1500,
+    costPreference: 0.0001,
+    latencyPreference: 1500,
     supportsStructuredOutput: false,
   },
 
@@ -53,8 +53,8 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     defaultModel: 'glm-4-flash',
     maxContextTokens: 128000,
     supportsStreaming: true,
-    estimatedCostPerRequest: 0.00005,
-    estimatedLatencyMs: 1800,
+    costPreference: 0.00005,
+    latencyPreference: 1800,
     supportsStructuredOutput: false,
   },
 
@@ -64,8 +64,8 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     defaultModel: 'gpt-4o',
     maxContextTokens: 128000,
     supportsStreaming: true,
-    estimatedCostPerRequest: 0,
-    estimatedLatencyMs: 2500,
+    costPreference: 0,
+    latencyPreference: 2500,
     headers: { 'Copilot-Integration-Id': 'vscode-chat' },
     supportsStructuredOutput: true,
   },
@@ -76,8 +76,8 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     defaultModel: 'hunyuan-lite',
     maxContextTokens: 32000,
     supportsStreaming: true,
-    estimatedCostPerRequest: 0,
-    estimatedLatencyMs: 2000,
+    costPreference: 0,
+    latencyPreference: 2000,
     supportsStructuredOutput: false,
   },
 
@@ -87,8 +87,8 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     defaultModel: 'abab6.5s-chat',
     maxContextTokens: 32768,
     supportsStreaming: true,
-    estimatedCostPerRequest: 0.002,
-    estimatedLatencyMs: 2500,
+    costPreference: 0.002,
+    latencyPreference: 2500,
     supportsStructuredOutput: false,
   },
 
@@ -98,8 +98,8 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     defaultModel: 'moonshot-v1-8k',
     maxContextTokens: 8192,
     supportsStreaming: true,
-    estimatedCostPerRequest: 0.002,
-    estimatedLatencyMs: 2000,
+    costPreference: 0.002,
+    latencyPreference: 2000,
     supportsStructuredOutput: false,
   },
 };
