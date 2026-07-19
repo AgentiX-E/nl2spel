@@ -205,6 +205,41 @@ describe('WebLLMProvider', () => {
       mockCreateCompletions.mockRejectedValueOnce(new Error('GPU out of memory'));
       await expect(provider.generate(BASE_PROMPT)).rejects.toThrow('WebLLM generation failed');
     });
+
+    it('should handle null content in engine response', async () => {
+      const provider = new WebLLMProvider({ model: 'gemma-2-2b-it' });
+      await provider.initialize();
+      mockCreateCompletions.mockResolvedValueOnce({
+        choices: [{ message: { content: null }, finish_reason: 'stop' }],
+        usage: null,
+      });
+      const response = await provider.generate(BASE_PROMPT);
+      expect(response.text).toBe(''); // ?? '' fallback
+    });
+
+    it('should handle missing finish_reason in engine response', async () => {
+      const provider = new WebLLMProvider({ model: 'gemma-2-2b-it' });
+      await provider.initialize();
+      mockCreateCompletions.mockResolvedValueOnce({
+        choices: [{ message: { content: 'result' } }],
+        usage: null,
+      });
+      const response = await provider.generate(BASE_PROMPT);
+      expect(response.finishReason).toBe('stop'); // ?? 'stop' fallback
+    });
+
+    it('should handle missing usage stats in engine response', async () => {
+      const provider = new WebLLMProvider({ model: 'gemma-2-2b-it' });
+      await provider.initialize();
+      mockCreateCompletions.mockResolvedValueOnce({
+        choices: [{ message: { content: 'result' }, finish_reason: 'stop' }],
+        // usage absent
+      });
+      const response = await provider.generate(BASE_PROMPT);
+      expect(response.usage.promptTokens).toBe(0);
+      expect(response.usage.completionTokens).toBe(0);
+      expect(response.usage.totalTokens).toBe(0);
+    });
   });
 
   // ===== generateStream Tests =====

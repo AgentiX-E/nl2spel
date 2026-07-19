@@ -687,4 +687,112 @@ describe('PROVIDER_PRESETS', () => {
       expect(preset.defaultModel).toBeTruthy();
     }
   });
+
+  // ===== Boundary coverage: defensive fallback branches =====
+  describe('boundary conditions', () => {
+    const mockPb = () => ({
+      build: vi.fn().mockReturnValue({
+        system: 's',
+        user: 'u',
+        contextSchema: { root: null, variables: {}, beans: {}, types: {}, functions: {} },
+        examples: [],
+      }),
+    });
+    const TEST_PROMPT = {
+      system: 's',
+      user: 'u',
+      contextSchema: { root: null, variables: {}, beans: {}, types: {}, functions: {} },
+      examples: [],
+    };
+
+    it('should handle null content in response', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          model: 'test-model',
+          choices: [{ message: { content: null }, finish_reason: 'stop' }],
+          usage: null,
+        }),
+      } as Response);
+
+      const provider = new OpenAICompatibleProvider(
+        { custom: { name: 't', baseURL: 'https://t.local/v1', apiKey: 'k', model: 't' } },
+        mockPb(),
+      );
+
+      const result = await provider.generate(TEST_PROMPT);
+      expect(result.text).toBe('');
+    });
+
+    it('should handle missing finish_reason', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          model: 'test-model',
+          choices: [{ message: { content: 'result' } }],
+          usage: null,
+        }),
+      } as Response);
+
+      const provider = new OpenAICompatibleProvider(
+        { custom: { name: 't', baseURL: 'https://t.local/v1', apiKey: 'k', model: 't' } },
+        mockPb(),
+      );
+
+      const result = await provider.generate(TEST_PROMPT);
+      expect(result.finishReason).toBe('stop');
+    });
+
+    it('should handle missing usage stats', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          model: 'test-model',
+          choices: [{ message: { content: 'result' }, finish_reason: 'stop' }],
+        }),
+      } as Response);
+
+      const provider = new OpenAICompatibleProvider(
+        { custom: { name: 't', baseURL: 'https://t.local/v1', apiKey: 'k', model: 't' } },
+        mockPb(),
+      );
+
+      const result = await provider.generate(TEST_PROMPT);
+      expect(result.usage.promptTokens).toBe(0);
+      expect(result.usage.completionTokens).toBe(0);
+      expect(result.usage.totalTokens).toBe(0);
+    });
+
+    it('should handle streaming chunk with null delta', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                'data: {"choices":[{"delta":{"content":null},"finish_reason":null}]}\n\n',
+              ),
+            );
+            controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+            controller.close();
+          },
+        }),
+      } as Response);
+
+      const provider = new OpenAICompatibleProvider(
+        { custom: { name: 't', baseURL: 'https://t.local/v1', apiKey: 'k', model: 't' } },
+        mockPb(),
+      );
+
+      const chunks: string[] = [];
+      for await (const chunk of provider.generateStream!(TEST_PROMPT, { stream: true })) {
+        chunks.push(chunk.delta);
+      }
+      expect(chunks).toContain('');
+    });
+  });
 });
