@@ -12,7 +12,7 @@ All notable changes to the NL2SpEL project.
 - **Sub-package peerDeps**: Changed `workspace:*` to `>=1.1.0` in `nl2spel-openai` and `nl2spel-webllm` peerDependencies for npm compatibility
 - **Phantom peerDependencies**: Removed unused `ai` and `@ai-sdk/openai` from `nl2spel-openai` peerDeps
 - **GBNF dead code**: Commented out unused GBNF generation call in WebLLM provider
-- **Documentation**: Updated stale test counts (527/68 core/webllm) and pattern count (48+)
+- **Documentation**: Updated stale test counts (534/73 core/webllm) and pattern count (63)
 
 ## [1.1.0] — 2026-07-12
 
@@ -38,13 +38,13 @@ All notable changes to the NL2SpEL project.
 - WebLLM package: 4 → 3 source files (net -475 lines)
 
 ### 🧪 Testing
-- **650 vitest tests** across 19 test files (527 core + 55 openai + 68 webllm)
-- **7 Playwright browser tests** in real Chromium (model-configs)
-- **Real DeepSeek integration tests** — 17 tests covering comparison, null, logical, range, collection, permission, streaming, error handling
-- **Mocked fetch tests** — 19 tests for OpenAI provider (generate, stream, error paths, retry)
-- **Core**: 99.6% statements / 94.95% branches / 100% functions
-- **OpenAI**: 100% statements / 95.12% branches / 100% functions
-- **WebLLM**: 100% statements / 92.3% branches / 100% functions
+- **650 vitest tests** across 19 test files (534 core + 43 openai + 73 webllm)
+- **2 Playwright browser tests** in real Chromium (model-configs)
+- **Real DeepSeek integration tests** — 1 test (16 skipped when API key absent) covering comparison, null, logical, range, collection, permission, streaming, error handling
+- **Mocked fetch tests** — 42 tests for OpenAI provider (generate, stream, error paths, retry)
+- **Core**: 99.67% statements / 95.45% branches / 100% functions
+- **OpenAI**: 100% statements / 98.85% branches / 100% functions
+- **WebLLM**: 100% statements / 98.73% branches / 100% functions
 
 ### 🔧 CI/CD
 - **Single unified `ci.yml`** — 6 jobs: Lint/TypeCheck, Tests/Coverage, Benchmark, Browser Tests, API Docs, GitHub Pages
@@ -79,9 +79,9 @@ All notable changes to the NL2SpEL project.
 ### Added
 
 #### Core Engine (`@agentix-e/nl2spel`)
-- `NL2SpelEngine` — main engine with `generate()`, `generateBatch()`, `explain()`, `offlineOnly`
+- `NL2SpelEngine` — main engine with `generate()`, `generateBatch()`, `explain()`; `offlineOnly` mode via `generate(nl, { offlineOnly: true })`
 - `PatternMatcher` — Layer 0 pattern matching with 40+ built-in patterns in Chinese & English
-  - 12 pattern groups: Comparison, NullCheck, Permission, Logical, String, Collection, Range, Elvis, TypeCheck, Boolean, Date, Selection/Projection
+  - 12 pattern groups: Comparison, NullCheck, Permission, Logical, String, Collection, Range, Elvis, TypeCheck, Boolean, Date, Selection/Projection (63 built-in patterns)
   - Support for custom pattern registration via `engine.registerPattern()`
   - P99 latency < 1ms
 - `IntentClassifier` — Layer 1 intent classification with 15 NLIntent types

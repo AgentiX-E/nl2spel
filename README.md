@@ -32,8 +32,8 @@
 ```
                     ┌─────────────────────────────────┐
                     │        NL2SpEL Engine            │
-                    │  generate / generateBatch /      │
-                    │  explain / offlineOnly            │
+                    │  generate({ offlineOnly, ... }) │
+                    │  generateBatch / explain        │
                     └───────────────┬─────────────────┘
                                     │
                     ┌───────────────▼─────────────────┐
@@ -59,9 +59,9 @@
 
 | Package | Description | Tests | Dependencies |
 |---|------|------|------|
-| [`@agentix-e/nl2spel`](./packages/nl2spel/README.md) | Core Engine | 532 | Zero external deps |
-| [`@agentix-e/nl2spel-openai`](./packages/nl2spel-openai/README.md) | LLM API Provider | 55 | core |
-| [`@agentix-e/nl2spel-webllm`](./packages/nl2spel-webllm/README.md) | Browser-local LLM | 68 | core |
+| [`@agentix-e/nl2spel`](./packages/nl2spel/README.md) | Core Engine | 534 | Zero external deps |
+| [`@agentix-e/nl2spel-openai`](./packages/nl2spel-openai/README.md) | LLM API Provider | 43 | core |
+| [`@agentix-e/nl2spel-webllm`](./packages/nl2spel-webllm/README.md) | Browser-local LLM | 73 | core |
 
 - [API Documentation](https://agentix-e.github.io/nl2spel/api)
 - [Coverage Report](https://agentix-e.github.io/nl2spel/coverage)
@@ -156,7 +156,7 @@ console.log(explanation.strategy);   // "pattern" | "template" | "llm-api"
 ## FAQ
 
 ### What SpEL features can NL2SpEL generate?
-NL2SpEL generates expressions covering comparisons, logical operators, collection selection/projection, method invocation, and type references. Simple patterns (> 63 bilingual) are matched offline; complex multi-clause expressions are routed to the LLM layer.
+NL2SpEL generates expressions covering comparisons, logical operators, collection selection/projection, method invocation, and type references. Simple patterns (63 bilingual) are matched offline; complex multi-clause expressions are routed to the LLM layer.
 
 ### Do I need an API key?
 No — for Layers 0–1 (pattern matching and semantic templates). API keys are only needed for Layer 2 (LLM API providers like DeepSeek, OpenAI) and Layer 3 (WebLLM is fully local with WebGPU acceleration).

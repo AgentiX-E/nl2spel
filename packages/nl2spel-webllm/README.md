@@ -18,10 +18,10 @@
 
 | Model | Context | VRAM | Quantization |
 |-------|---------|------|--------------|
-| Qwen 2.5 1.5B | 32K | 1.5 GB | q4f16_1 |
-| Gemma 2 2B | 8K | 2.0 GB | q4f16_1 |
-| Phi-3 Mini 4K | 4K | 2.8 GB | q4f16_1 |
-| Llama 3.2 3B | 8K | 3.5 GB | q4f16_1 |
+| Qwen 2.5 1.5B Instruct | 32K | 1.5 GB | q4f16_1 |
+| Gemma 2 2B Instruct | 8K | 2.0 GB | q4f16_1 |
+| Phi-3 Mini 4K Instruct | 4K | 2.8 GB | q4f16_1 |
+| Llama 3.2 3B Instruct | 8K | 3.5 GB | q4f16_1 |
 
 ## Quick Start
 

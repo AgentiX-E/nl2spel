@@ -22,7 +22,7 @@
 | DeepSeek | deepseek-chat | 64K | ✅ |
 | GLM (Zhipu) | glm-4-flash | 128K | ✅ |
 | Copilot | gpt-4o | 128K | ✅ |
-| Hunyuan (Tencent) | hunyuan-lite | 32K | ✅ |
+| Hunyuan (Tencent) | hunyuan-lite | 32K (32000) | ✅ |
 | MiniMax | abab6.5s-chat | 32K | ✅ |
 | Kimi | moonshot-v1-8k | 8K | ✅ |
 
