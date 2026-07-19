@@ -3,62 +3,87 @@ import type { LLMProvider } from './llm-provider.js';
 /**
  * ProviderRegistry — manages registered LLMProvider instances.
  *
- * Responsibilities:
- * 1. Register/unregister Providers
- * 2. Sort by priority (offline first > low latency > high accuracy)
- * 3. Look up Providers by name (for forced selection)
+ * Provider ordering is user-controlled:
+ * 1. Offline providers first (engine-enforced — offline capability is a binary fact)
+ * 2. User-assigned priority (lower = preferred; default = registration order)
+ * 3. Registration order (tiebreaker when priorities are equal)
  */
 export class ProviderRegistry {
-  private _providers: LLMProvider[] = [];
+  private _providers: { provider: LLMProvider; priority: number; index: number }[] = [];
+  private _nextIndex = 0;
 
-  /** Register a Provider */
-  public register(provider: LLMProvider): void {
-    if (this._providers.some((p) => p.name === provider.name)) {
+  /**
+   * Register a Provider.
+   * @param provider LLMProvider instance
+   * @param options.priority User-assigned priority (lower = preferred). Defaults to registration order.
+   */
+  public register(provider: LLMProvider, options?: { priority?: number }): void {
+    if (this._providers.some((p) => p.provider.name === provider.name)) {
       throw new Error(`Provider '${provider.name}' already registered`);
     }
-    this._providers.push(provider);
+    this._providers.push({
+      provider,
+      priority: options?.priority ?? this._nextIndex,
+      index: this._nextIndex,
+    });
+    this._nextIndex++;
   }
 
   /** Unregister a Provider */
   public unregister(name: string): void {
-    this._providers = this._providers.filter((p) => p.name !== name);
+    this._providers = this._providers.filter((p) => p.provider.name !== name);
   }
 
   /** Get a Provider by name */
   public get(name: string): LLMProvider | undefined {
-    return this._providers.find((p) => p.name === name);
+    return this._providers.find((p) => p.provider.name === name)?.provider;
   }
 
   /**
    * Get available Providers sorted by priority.
-   * Sort rule: offline > lower cost preference > lower latency preference
+   * Sort rule: offline first → user priority (asc) → registration order (asc)
    */
   public async getPrioritized(): Promise<LLMProvider[]> {
-    const available: LLMProvider[] = [];
-    for (const p of this._providers) {
-      if (await p.isAvailable()) {
-        available.push(p);
+    const available: { provider: LLMProvider; priority: number; index: number }[] = [];
+    for (const entry of this._providers) {
+      if (await entry.provider.isAvailable()) {
+        available.push(entry);
       }
     }
-    return available.sort((a, b) => {
-      // 1. Offline first
-      const aOffline = a.capabilities.offlineAvailable;
-      const bOffline = b.capabilities.offlineAvailable;
-      if (aOffline && !bOffline) return -1;
-      if (!aOffline && bOffline) return 1;
-      // 2. Lower cost preference first
-      const costA = a.capabilities.costPreference ?? Infinity;
-      const costB = b.capabilities.costPreference ?? Infinity;
-      if (costA < costB) return -1;
-      if (costB < costA) return 1;
-      // 3. Lower latency preference first
-      return a.capabilities.latencyPreference - b.capabilities.latencyPreference;
-    });
+    return available
+      .sort((a, b) => {
+        // 1. Offline first
+        const aOffline = a.provider.capabilities.offlineAvailable;
+        const bOffline = b.provider.capabilities.offlineAvailable;
+        if (aOffline && !bOffline) return -1;
+        if (!aOffline && bOffline) return 1;
+        // 2. User priority (lower = preferred)
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        // 3. Registration order
+        return a.index - b.index;
+      })
+      .map((entry) => entry.provider);
+  }
+
+  /**
+   * Explicitly reorder providers by name.
+   * Providers not listed retain their position after the reordered ones.
+   */
+  public reorder(providerNames: string[]): void {
+    const orderMap = new Map(providerNames.map((name, i) => [name, i]));
+    const maxExisting = this._providers.reduce(
+      (max, p) => Math.max(max, p.priority),
+      providerNames.length - 1,
+    );
+    for (const entry of this._providers) {
+      const explicitIndex = orderMap.get(entry.provider.name);
+      entry.priority = explicitIndex ?? maxExisting + entry.index + 1;
+    }
   }
 
   /** List all registered Providers */
   public list(): LLMProvider[] {
-    return [...this._providers];
+    return this._providers.map((p) => p.provider);
   }
 
   /** Number of registered Providers */

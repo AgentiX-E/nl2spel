@@ -68,8 +68,6 @@ export class WebLLMProvider implements LLMProvider {
       supportsStreaming: true,
       supportsStructuredOutput: false,
       offlineAvailable: true,
-      costPreference: 0,
-      latencyPreference: Math.round((1000 / this.modelConfig.estimatedTokPerSec) * 50),
     };
   }
 

@@ -35,7 +35,8 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
       expect(provider.name).toBe('deepseek');
-      expect(provider.capabilities.costPreference).toBe(0.0001);
+      expect(provider.capabilities.offlineAvailable).toBe(false);
+      expect(provider.capabilities.supportsStreaming).toBe(true);
     });
 
     it('should create provider with glm preset', () => {
@@ -52,7 +53,7 @@ describe('OpenAICompatibleProvider', () => {
         createMockPromptBuilder(),
       );
       expect(provider.name).toBe('copilot');
-      expect(provider.capabilities.costPreference).toBe(0);
+      expect(provider.capabilities.supportsStructuredOutput).toBe(true);
     });
 
     it('should create provider with hunyuan preset', () => {
@@ -680,9 +681,10 @@ describe('PROVIDER_PRESETS', () => {
     }
   });
 
-  it('all presets should have valid cost estimates', () => {
+  it('all presets should have valid baseURL and defaultModel', () => {
     for (const preset of Object.values(PROVIDER_PRESETS)) {
-      expect(preset.costPreference).toBeGreaterThanOrEqual(0);
+      expect(preset.baseURL).toBeTruthy();
+      expect(preset.defaultModel).toBeTruthy();
     }
   });
 });

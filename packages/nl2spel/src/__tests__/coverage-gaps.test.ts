@@ -276,8 +276,8 @@ describe('Coverage Gap Fillers', () => {
     });
   });
 
-  // ===== provider-registry.ts: getPrioritized offline/cost compare (lines 46, 49-50) =====
-  describe('provider-registry: getPrioritized offline and cost comparison', () => {
+  // ===== provider-registry.ts: offline-first + priority ordering =====
+  describe('provider-registry: getPrioritized ordering', () => {
     it('puts offline provider before online provider', async () => {
       const registry = new ProviderRegistry();
       const online: LLMProvider = {
@@ -288,8 +288,6 @@ describe('Coverage Gap Fillers', () => {
           supportsStreaming: false,
           supportsStructuredOutput: false,
           offlineAvailable: false,
-          costPreference: 0.001,
-          latencyPreference: 100,
         },
         generate: vi.fn(),
         isAvailable: vi.fn().mockResolvedValue(true),
@@ -302,56 +300,84 @@ describe('Coverage Gap Fillers', () => {
           supportsStreaming: false,
           supportsStructuredOutput: false,
           offlineAvailable: true,
-          costPreference: 0,
-          latencyPreference: 50,
         },
         generate: vi.fn(),
         isAvailable: vi.fn().mockResolvedValue(true),
       };
-      registry.register(online);
-      registry.register(offline);
+      registry.register(online, { priority: 0 });
+      registry.register(offline, { priority: 100 });
 
       const prioritized = await registry.getPrioritized();
       expect(prioritized[0]!.name).toBe('offline-provider');
       expect(prioritized[1]!.name).toBe('online-provider');
     });
 
-    it('sorts by cost when both offline statuses are same', async () => {
+    it('sorts by user priority when same offline status', async () => {
       const registry = new ProviderRegistry();
-      const cheap: LLMProvider = {
-        name: 'cheap-provider',
+      const second: LLMProvider = {
+        name: 'second',
         capabilities: {
           maxContextTokens: 1000,
           supportsGrammarConstraint: false,
           supportsStreaming: false,
           supportsStructuredOutput: false,
           offlineAvailable: false,
-          costPreference: 0.0001,
-          latencyPreference: 100,
         },
         generate: vi.fn(),
         isAvailable: vi.fn().mockResolvedValue(true),
       };
-      const expensive: LLMProvider = {
-        name: 'expensive-provider',
+      const first: LLMProvider = {
+        name: 'first',
         capabilities: {
           maxContextTokens: 1000,
           supportsGrammarConstraint: false,
           supportsStreaming: false,
           supportsStructuredOutput: false,
           offlineAvailable: false,
-          costPreference: 0.01,
-          latencyPreference: 50,
         },
         generate: vi.fn(),
         isAvailable: vi.fn().mockResolvedValue(true),
       };
-      registry.register(expensive);
-      registry.register(cheap);
+      registry.register(second, { priority: 10 });
+      registry.register(first, { priority: 0 });
 
       const prioritized = await registry.getPrioritized();
-      expect(prioritized[0]!.name).toBe('cheap-provider');
-      expect(prioritized[1]!.name).toBe('expensive-provider');
+      expect(prioritized[0]!.name).toBe('first');
+      expect(prioritized[1]!.name).toBe('second');
+    });
+
+    it('falls back to registration order when priorities equal', async () => {
+      const registry = new ProviderRegistry();
+      const regFirst: LLMProvider = {
+        name: 'reg-first',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const regSecond: LLMProvider = {
+        name: 'reg-second',
+        capabilities: {
+          maxContextTokens: 1000,
+          supportsGrammarConstraint: false,
+          supportsStreaming: false,
+          supportsStructuredOutput: false,
+          offlineAvailable: false,
+        },
+        generate: vi.fn(),
+        isAvailable: vi.fn().mockResolvedValue(true),
+      };
+      registry.register(regFirst);
+      registry.register(regSecond);
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized[0]!.name).toBe('reg-first');
+      expect(prioritized[1]!.name).toBe('reg-second');
     });
   });
 
@@ -563,218 +589,127 @@ describe('Coverage Gap Fillers', () => {
     });
   });
 
-  // ===== provider-registry.ts: both offline (covers line 48 short-circuit) =====
+  // ===== provider-registry.ts: both offline + reorder =====
   describe('provider-registry: both offline providers', () => {
-    it('sorts two offline providers by cost then latency', async () => {
+    it('sorts two offline providers by priority', async () => {
       const registry = new ProviderRegistry();
-      const slowOffline: LLMProvider = {
-        name: 'slow-offline',
+      const second: LLMProvider = {
+        name: 'offline-second',
         capabilities: {
           maxContextTokens: 1000,
           supportsGrammarConstraint: false,
           supportsStreaming: false,
           supportsStructuredOutput: false,
           offlineAvailable: true,
-          costPreference: 0.001,
-          latencyPreference: 200,
         },
         generate: vi.fn(),
         isAvailable: vi.fn().mockResolvedValue(true),
       };
-      const fastOffline: LLMProvider = {
-        name: 'fast-offline',
+      const first: LLMProvider = {
+        name: 'offline-first',
         capabilities: {
           maxContextTokens: 1000,
           supportsGrammarConstraint: false,
           supportsStreaming: false,
           supportsStructuredOutput: false,
           offlineAvailable: true,
-          costPreference: 0.001,
-          latencyPreference: 50,
         },
         generate: vi.fn(),
         isAvailable: vi.fn().mockResolvedValue(true),
       };
-      registry.register(slowOffline);
-      registry.register(fastOffline);
+      registry.register(second, { priority: 10 });
+      registry.register(first, { priority: 0 });
+
       const prioritized = await registry.getPrioritized();
-      // Both offline, same cost → sorted by latency (lower first)
       expect(prioritized).toHaveLength(2);
-      expect(prioritized[0]!.name).toBe('fast-offline');
-      expect(prioritized[1]!.name).toBe('slow-offline');
+      expect(prioritized[0]!.name).toBe('offline-first');
+      expect(prioritized[1]!.name).toBe('offline-second');
     });
 
-    it('sorts two offline providers with different costs', async () => {
+    it('sorts two offline providers with different priorities', async () => {
       const registry = new ProviderRegistry();
-      const expensiveOffline: LLMProvider = {
-        name: 'expensive-offline',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: true,
-          costPreference: 0.01,
-          latencyPreference: 50,
+      registry.register(
+        {
+          name: 'low-pref',
+          capabilities: {
+            maxContextTokens: 1000,
+            supportsGrammarConstraint: false,
+            supportsStreaming: false,
+            supportsStructuredOutput: false,
+            offlineAvailable: true,
+          },
+          generate: vi.fn(),
+          isAvailable: vi.fn().mockResolvedValue(true),
         },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      const cheapOffline: LLMProvider = {
-        name: 'cheap-offline',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: true,
-          costPreference: 0.0001,
-          latencyPreference: 200,
+        { priority: 100 },
+      );
+      registry.register(
+        {
+          name: 'high-pref',
+          capabilities: {
+            maxContextTokens: 1000,
+            supportsGrammarConstraint: false,
+            supportsStreaming: false,
+            supportsStructuredOutput: false,
+            offlineAvailable: true,
+          },
+          generate: vi.fn(),
+          isAvailable: vi.fn().mockResolvedValue(true),
         },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      registry.register(expensiveOffline);
-      registry.register(cheapOffline);
+        { priority: 0 },
+      );
+
       const prioritized = await registry.getPrioritized();
-      // Both offline → sorted by cost (cheaper first)
       expect(prioritized).toHaveLength(2);
-      expect(prioritized[0]!.name).toBe('cheap-offline');
-      expect(prioritized[1]!.name).toBe('expensive-offline');
+      expect(prioritized[0]!.name).toBe('high-pref');
+      expect(prioritized[1]!.name).toBe('low-pref');
     });
   });
 
-  // ===== provider-registry.ts: same offline & same cost (lines 46, 49-50) =====
-  describe('provider-registry: same offline and same cost sorting', () => {
-    it('sorts by latency when both have same offline and same cost', async () => {
+  // ===== provider-registry.ts: reorder + three-provider ordering =====
+  describe('provider-registry: reorder and three-provider', () => {
+    it('explicitly reorders providers', async () => {
       const registry = new ProviderRegistry();
-      const fast: LLMProvider = {
-        name: 'fast-same',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: false,
-          costPreference: 0.001,
-          latencyPreference: 50,
-        },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      const slow: LLMProvider = {
-        name: 'slow-same',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: false,
-          costPreference: 0.001,
-          latencyPreference: 200,
-        },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      registry.register(slow);
-      registry.register(fast);
-      const prioritized = await registry.getPrioritized();
-      // Same offline, same cost → sorted by latency (lower first)
-      expect(prioritized[0]!.name).toBe('fast-same');
-      expect(prioritized[1]!.name).toBe('slow-same');
-    });
+      registry.register(createMock('a'));
+      registry.register(createMock('b'));
+      registry.register(createMock('c'));
 
-    it('handles undefined costPreference as Infinity', async () => {
-      const registry = new ProviderRegistry();
-      const withCost: LLMProvider = {
-        name: 'with-cost',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: false,
-          costPreference: 0.0001,
-          latencyPreference: 100,
-        },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      const noCost: LLMProvider = {
-        name: 'no-cost',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: false,
-          costPreference: undefined as any,
-          latencyPreference: 50,
-        },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      registry.register(noCost);
-      registry.register(withCost);
-      const prioritized = await registry.getPrioritized();
-      // Provider with cost (0.0001) < Infinity → with-cost first
-      expect(prioritized[0]!.name).toBe('with-cost');
-    });
+      registry.reorder(['c', 'a']);
 
-    // Three providers with same offline status, escalating costs,
-    // to exercise all sort comparison paths
-    it('sorts three providers with same offline status by cost then latency', async () => {
-      const registry = new ProviderRegistry();
-      const high: LLMProvider = {
-        name: 'high-cost',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: false,
-          costPreference: 0.005,
-          latencyPreference: 100,
-        },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      const mid: LLMProvider = {
-        name: 'mid-cost',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: false,
-          costPreference: 0.003,
-          latencyPreference: 50,
-        },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      const low: LLMProvider = {
-        name: 'low-cost',
-        capabilities: {
-          maxContextTokens: 1000,
-          supportsGrammarConstraint: false,
-          supportsStreaming: false,
-          supportsStructuredOutput: false,
-          offlineAvailable: false,
-          costPreference: 0.001,
-          latencyPreference: 200,
-        },
-        generate: vi.fn(),
-        isAvailable: vi.fn().mockResolvedValue(true),
-      };
-      registry.register(high);
-      registry.register(mid);
-      registry.register(low);
       const prioritized = await registry.getPrioritized();
       expect(prioritized).toHaveLength(3);
-      expect(prioritized[0]!.name).toBe('low-cost');
-      expect(prioritized[1]!.name).toBe('mid-cost');
-      expect(prioritized[2]!.name).toBe('high-cost');
+      expect(prioritized[0]!.name).toBe('c');
+      expect(prioritized[1]!.name).toBe('a');
+      expect(prioritized[2]!.name).toBe('b');
+    });
+
+    it('sorts three providers: offline → priority → registration', async () => {
+      const registry = new ProviderRegistry();
+      registry.register(createMock('fallback-online'), { priority: 50 });
+      registry.register(createMock('preferred-online'), { priority: 0 });
+      registry.register(createMock('any-offline', true), { priority: 999 });
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized).toHaveLength(3);
+      expect(prioritized[0]!.name).toBe('any-offline');
+      expect(prioritized[1]!.name).toBe('preferred-online');
+      expect(prioritized[2]!.name).toBe('fallback-online');
     });
   });
+
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  function createMock(name: string, offline = false): LLMProvider {
+    return {
+      name,
+      capabilities: {
+        maxContextTokens: 1000,
+        supportsGrammarConstraint: false,
+        supportsStreaming: false,
+        supportsStructuredOutput: false,
+        offlineAvailable: offline,
+      },
+      generate: vi.fn(),
+      isAvailable: vi.fn().mockResolvedValue(true),
+    };
+  }
 });

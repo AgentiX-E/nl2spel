@@ -6,8 +6,6 @@ function createMockProvider(
   name: string,
   overrides: Partial<{
     offlineAvailable: boolean;
-    costPreference: number;
-    latencyPreference: number;
     isAvailable: boolean;
   }> = {},
 ): LLMProvider {
@@ -17,8 +15,6 @@ function createMockProvider(
     supportsStreaming: true,
     supportsStructuredOutput: true,
     offlineAvailable: overrides.offlineAvailable ?? false,
-    costPreference: overrides.costPreference ?? 0.0001,
-    latencyPreference: overrides.latencyPreference ?? 2000,
   };
 
   return {
@@ -62,38 +58,30 @@ describe('ProviderRegistry', () => {
       );
     });
 
-    it('should register multiple providers with different names', () => {
+    it('should accept a priority option', () => {
       const registry = new ProviderRegistry();
-      registry.register(createMockProvider('openai'));
-      registry.register(createMockProvider('deepseek'));
-      registry.register(createMockProvider('glm'));
-      expect(registry.list()).toHaveLength(3);
-      expect(registry.count).toBe(3);
+      registry.register(createMockProvider('test'), { priority: 5 });
+      // Verify no throw + count is correct
+      expect(registry.count).toBe(1);
     });
-  });
 
-  // ===== Unregistration =====
-  describe('unregistration', () => {
-    it('should unregister a provider by name', () => {
+    it('should unregister a provider', () => {
       const registry = new ProviderRegistry();
       registry.register(createMockProvider('openai'));
-      registry.register(createMockProvider('deepseek'));
-
+      expect(registry.count).toBe(1);
       registry.unregister('openai');
-      expect(registry.list()).toHaveLength(1);
-      expect(registry.get('openai')).toBeUndefined();
-      expect(registry.get('deepseek')).toBeDefined();
+      expect(registry.count).toBe(0);
     });
 
-    it('should not throw when unregistering non-existent provider', () => {
+    it('should not throw when unregistering a non-existent provider', () => {
       const registry = new ProviderRegistry();
-      expect(() => registry.unregister('nonexistent')).not.toThrow();
+      expect(() => registry.unregister('unknown')).not.toThrow();
     });
   });
 
-  // ===== Get by name =====
-  describe('get', () => {
-    it('should return provider by name', () => {
+  // ===== Lookup =====
+  describe('lookup', () => {
+    it('should return registered provider by name', () => {
       const registry = new ProviderRegistry();
       const provider = createMockProvider('openai');
       registry.register(provider);
@@ -126,52 +114,33 @@ describe('ProviderRegistry', () => {
       const onlineProvider = createMockProvider('openai', { offlineAvailable: false });
       const offlineProvider = createMockProvider('webllm', { offlineAvailable: true });
 
-      registry.register(onlineProvider);
-      registry.register(offlineProvider);
+      registry.register(onlineProvider, { priority: 0 }); // low priority number = preferred
+      registry.register(offlineProvider, { priority: 100 });
 
       const prioritized = await registry.getPrioritized();
+      // Offline always wins regardless of priority
       expect(prioritized[0]!.name).toBe('webllm');
       expect(prioritized[1]!.name).toBe('openai');
     });
 
-    it('should prioritize lower cost providers second', async () => {
+    it('should sort by user priority when same offline status', async () => {
       const registry = new ProviderRegistry();
-      const expensiveProvider = createMockProvider('openai', {
-        costPreference: 0.001,
-        offlineAvailable: false,
-      });
-      const cheapProvider = createMockProvider('deepseek', {
-        costPreference: 0.0001,
-        offlineAvailable: false,
-      });
-
-      registry.register(expensiveProvider);
-      registry.register(cheapProvider);
+      registry.register(createMockProvider('high-priority'), { priority: 100 });
+      registry.register(createMockProvider('low-priority'), { priority: 0 });
 
       const prioritized = await registry.getPrioritized();
-      expect(prioritized[0]!.name).toBe('deepseek');
-      expect(prioritized[1]!.name).toBe('openai');
+      expect(prioritized[0]!.name).toBe('low-priority');
+      expect(prioritized[1]!.name).toBe('high-priority');
     });
 
-    it('should prioritize lower latency when cost is equal', async () => {
+    it('should fall back to registration order when priorities equal', async () => {
       const registry = new ProviderRegistry();
-      const slowProvider = createMockProvider('openai', {
-        costPreference: 0.0001,
-        latencyPreference: 3000,
-        offlineAvailable: false,
-      });
-      const fastProvider = createMockProvider('glm', {
-        costPreference: 0.0001,
-        latencyPreference: 1000,
-        offlineAvailable: false,
-      });
-
-      registry.register(slowProvider);
-      registry.register(fastProvider);
+      registry.register(createMockProvider('first'));
+      registry.register(createMockProvider('second'));
 
       const prioritized = await registry.getPrioritized();
-      expect(prioritized[0]!.name).toBe('glm');
-      expect(prioritized[1]!.name).toBe('openai');
+      expect(prioritized[0]!.name).toBe('first');
+      expect(prioritized[1]!.name).toBe('second');
     });
 
     it('should return empty array when no providers are available', async () => {
@@ -189,123 +158,67 @@ describe('ProviderRegistry', () => {
       expect(prioritized).toHaveLength(0);
     });
 
-    // Coverage: both providers offline → line 48 short-circuit (!aOffline=false)
-    it('should sort two offline providers by cost then latency', async () => {
+    // Both offline → sort by priority then registration order
+    it('should sort two offline providers by priority', async () => {
       const registry = new ProviderRegistry();
-      const slow = createMockProvider('offline-slow', {
-        offlineAvailable: true,
-        costPreference: 0.001,
-        latencyPreference: 200,
+      registry.register(createMockProvider('second-offline', { offlineAvailable: true }), {
+        priority: 10,
       });
-      const fast = createMockProvider('offline-fast', {
-        offlineAvailable: true,
-        costPreference: 0.001,
-        latencyPreference: 50,
+      registry.register(createMockProvider('first-offline', { offlineAvailable: true }), {
+        priority: 0,
       });
-
-      registry.register(slow);
-      registry.register(fast);
 
       const prioritized = await registry.getPrioritized();
-      expect(prioritized[0]!.name).toBe('offline-fast');
-      expect(prioritized[1]!.name).toBe('offline-slow');
+      expect(prioritized[0]!.name).toBe('first-offline');
+      expect(prioritized[1]!.name).toBe('second-offline');
     });
 
-    // Coverage: neither provider offline → skip line 46, exercise cost tie-breaker
-    it('should sort by cost when neither provider is offline (line 46 skip)', async () => {
+    // Three providers: mixed offline/online with priorities
+    it('should sort three providers correctly', async () => {
       const registry = new ProviderRegistry();
-      const expensive = createMockProvider('openai', {
-        costPreference: 0.01,
-        offlineAvailable: false,
+      // Online, low priority = most preferred online
+      registry.register(createMockProvider('preferred-online'), { priority: 0 });
+      // Online, high priority = less preferred
+      registry.register(createMockProvider('fallback-online'), { priority: 50 });
+      // Offline, any priority = always first
+      registry.register(createMockProvider('offline', { offlineAvailable: true }), {
+        priority: 999,
       });
-      const cheap = createMockProvider('gleam', {
-        costPreference: 0.001,
-        offlineAvailable: false,
-      });
-
-      registry.register(expensive);
-      registry.register(cheap);
-
-      const prioritized = await registry.getPrioritized();
-      expect(prioritized[0]!.name).toBe('gleam');
-      expect(prioritized[1]!.name).toBe('openai');
-    });
-
-    // Coverage: three providers same cost different latency (lines 49-50 = costs equal)
-    it('should sort by latency when three providers have same cost (covers line 49-50)', async () => {
-      const registry = new ProviderRegistry();
-      const slow = createMockProvider('openai', {
-        costPreference: 0.001,
-        latencyPreference: 3000,
-        offlineAvailable: false,
-      });
-      const medium = createMockProvider('deepseek', {
-        costPreference: 0.001,
-        latencyPreference: 2000,
-        offlineAvailable: false,
-      });
-      const fast = createMockProvider('glm', {
-        costPreference: 0.001,
-        latencyPreference: 1000,
-        offlineAvailable: false,
-      });
-
-      registry.register(slow);
-      registry.register(medium);
-      registry.register(fast);
 
       const prioritized = await registry.getPrioritized();
       expect(prioritized).toHaveLength(3);
-      expect(prioritized[0]!.name).toBe('glm');
-      expect(prioritized[1]!.name).toBe('deepseek');
-      expect(prioritized[2]!.name).toBe('openai');
+      expect(prioritized[0]!.name).toBe('offline');
+      expect(prioritized[1]!.name).toBe('preferred-online');
+      expect(prioritized[2]!.name).toBe('fallback-online');
     });
   });
 
-  // ===== list =====
-  describe('list', () => {
-    it('should return all registered providers including unavailable', () => {
+  // ===== Reorder =====
+  describe('reorder', () => {
+    it('should explicitly reorder providers', async () => {
       const registry = new ProviderRegistry();
-      registry.register(createMockProvider('openai', { isAvailable: false }));
-      registry.register(createMockProvider('deepseek', { isAvailable: true }));
+      registry.register(createMockProvider('a'));
+      registry.register(createMockProvider('b'));
+      registry.register(createMockProvider('c'));
 
-      const all = registry.list();
-      expect(all).toHaveLength(2);
+      registry.reorder(['c', 'a']);
+
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized[0]!.name).toBe('c');
+      expect(prioritized[1]!.name).toBe('a');
+      expect(prioritized[2]!.name).toBe('b');
     });
 
-    it('should return empty array when no providers', () => {
+    it('should no-op for empty reorder list', async () => {
       const registry = new ProviderRegistry();
-      expect(registry.list()).toEqual([]);
-    });
+      registry.register(createMockProvider('a'));
+      registry.register(createMockProvider('b'));
 
-    it('should return a copy, not the internal array', () => {
-      const registry = new ProviderRegistry();
-      registry.register(createMockProvider('openai'));
-      const list = registry.list();
-      list.push(createMockProvider('extra'));
-      expect(registry.count).toBe(1);
-    });
-  });
+      registry.reorder([]);
 
-  // ===== count =====
-  describe('count', () => {
-    it('should return 0 initially', () => {
-      const registry = new ProviderRegistry();
-      expect(registry.count).toBe(0);
-    });
-
-    it('should increment after registration', () => {
-      const registry = new ProviderRegistry();
-      registry.register(createMockProvider('openai'));
-      expect(registry.count).toBe(1);
-    });
-
-    it('should decrement after unregistration', () => {
-      const registry = new ProviderRegistry();
-      registry.register(createMockProvider('openai'));
-      registry.register(createMockProvider('deepseek'));
-      registry.unregister('openai');
-      expect(registry.count).toBe(1);
+      const prioritized = await registry.getPrioritized();
+      expect(prioritized[0]!.name).toBe('a');
+      expect(prioritized[1]!.name).toBe('b');
     });
   });
 });

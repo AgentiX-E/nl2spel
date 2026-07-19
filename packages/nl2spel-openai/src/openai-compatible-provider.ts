@@ -119,8 +119,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
       supportsStreaming: streaming,
       supportsStructuredOutput: preset?.supportsStructuredOutput ?? false,
       offlineAvailable: false,
-      costPreference: preset?.costPreference ?? 100,
-      latencyPreference: preset?.latencyPreference ?? 2000,
     };
   }
 

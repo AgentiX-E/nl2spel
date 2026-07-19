@@ -52,6 +52,9 @@ export interface LLMProvider {
 
 /**
  * LLMProvider capability declaration.
+ *
+ * Declares what the provider CAN do — facts the engine can verify.
+ * Provider ordering is user-controlled via {@link ProviderRegistry.register} priority.
  */
 export interface LLMCapabilities {
   /** Maximum context window (tokens) */
@@ -66,22 +69,8 @@ export interface LLMCapabilities {
   /** Whether Structured Output (JSON mode) is supported */
   supportsStructuredOutput: boolean;
 
-  /** Whether available offline */
+  /** Whether available offline (no network required) */
   offlineAvailable: boolean;
-
-  /**
-   * Cost preference weight — used by ProviderRegistry for provider ordering.
-   * Lower values indicate preferred (cheaper) providers.
-   * NOT a price guarantee; pricing is controlled by the LLM service.
-   */
-  costPreference?: number;
-
-  /**
-   * Latency preference weight — used by ProviderRegistry as secondary sort.
-   * Lower values indicate preferred (faster) providers.
-   * NOT a performance SLO; actual latency depends on network and service load.
-   */
-  latencyPreference: number;
 }
 
 // ============================================================
