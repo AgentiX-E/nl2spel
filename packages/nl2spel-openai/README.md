@@ -4,7 +4,8 @@
 >
 > 7 preset providers · Custom API support · Streaming output
 
-[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel-openai)](https://www.npmjs.com/package/@agentix-e/nl2spel-openai)
+[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel-openai?color=blue)](https://www.npmjs.com/package/@agentix-e/nl2spel-openai)
+[![API Docs](https://img.shields.io/badge/docs-TypeDoc-blue)](https://agentix-e.github.io/nl2spel/api/modules/nl2spel_openai.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
 ---

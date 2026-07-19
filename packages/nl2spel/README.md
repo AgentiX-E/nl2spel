@@ -4,7 +4,9 @@
 >
 > Zero external deps · Four-layer hybrid architecture · 532 tests · Chinese & English
 
-[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel)](https://www.npmjs.com/package/@agentix-e/nl2spel)
+[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel?color=blue)](https://www.npmjs.com/package/@agentix-e/nl2spel)
+[![API Docs](https://img.shields.io/badge/docs-TypeDoc-blue)](https://agentix-e.github.io/nl2spel/api/modules.html)
+[![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://agentix-e.github.io/nl2spel/coverage/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
 ---

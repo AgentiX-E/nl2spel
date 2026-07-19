@@ -4,7 +4,8 @@
 >
 > GBNF grammar-constrained decoding · 4 optimized models · Zero API cost · WebLLM handles GPU detection natively
 
-[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel-webllm)](https://www.npmjs.com/package/@agentix-e/nl2spel-webllm)
+[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel-webllm?color=blue)](https://www.npmjs.com/package/@agentix-e/nl2spel-webllm)
+[![API Docs](https://img.shields.io/badge/docs-TypeDoc-blue)](https://agentix-e.github.io/nl2spel/api/modules/nl2spel_webllm.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
 ---

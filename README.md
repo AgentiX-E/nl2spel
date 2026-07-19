@@ -5,9 +5,13 @@
 > Four-layer hybrid architecture (Pattern Matching + Semantic Slots + LLM API + WebLLM Local), supporting Chinese & English
 
 [![CI](https://github.com/AgentiX-E/nl2spel/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/nl2spel/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](https://agentix-e.github.io/nl2spel/coverage)
-[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel)](https://www.npmjs.com/package/@agentix-e/nl2spel)
+[![Docs](https://img.shields.io/badge/docs-TypeDoc-blue)](https://agentix-e.github.io/nl2spel/api/)
+[![Benchmark](https://img.shields.io/badge/benchmark-latest-blue)](https://agentix-e.github.io/nl2spel/benchmark/)
+[![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://agentix-e.github.io/nl2spel/coverage/)
+[![npm](https://img.shields.io/npm/v/@agentix-e/nl2spel?color=blue)](https://www.npmjs.com/package/@agentix-e/nl2spel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-green)](https://nodejs.org/)
 
 ## What is NL2SpEL?
 

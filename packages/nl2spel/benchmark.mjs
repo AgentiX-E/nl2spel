@@ -3,9 +3,7 @@
  * Quick performance benchmark for NL2SpEL core.
  * Used by CI workflow to verify SLO targets.
  */
-import { PatternMatcher } from './dist/pattern/pattern-matcher.js';
-import { BUILTIN_PATTERNS } from './dist/pattern/builtin-patterns.js';
-import { IntentClassifier } from './dist/template/intent-classifier.js';
+import { PatternMatcher, BUILTIN_PATTERNS, IntentClassifier } from './dist/index.js';
 
 console.log('Pattern Matching Benchmarks:');
 console.log('');
