@@ -73,7 +73,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     slots: {},
     priority: 98,
     tags: ['null', 'isNotNull'],
-    examples: [{ nl: '备注不为空', spel: '#备注 != null' }],
+    examples: [{ nl: '备注不为空', spel: '#remark != null' }],
     difficulty: 'easy',
     confidence: 0.98,
   },
@@ -84,7 +84,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     slots: {},
     priority: 97,
     tags: ['null', 'isNull'],
-    examples: [{ nl: '备注为空', spel: '#备注 == null' }],
+    examples: [{ nl: '备注为空', spel: '#remark == null' }],
     difficulty: 'easy',
     confidence: 0.98,
   },
@@ -117,32 +117,29 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
 
   {
     id: 'CN-CMP-GE',
-    match:
-      /^(?<field>[^\s，,、]+?)\s*(?:金额|值)?\s*(?:不小于|不低于|大于等于|>=)\s*(?<value>\d+(?:\.\d+)?)/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:不小于|不低于|大于等于|>=)\s*(?<value>\d+(?:\.\d+)?)/,
     spelTemplate: '#{field} >= {value}',
     slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
     priority: 93,
     tags: ['comparison', 'ge', 'chinese'],
-    examples: [{ nl: '金额不小于100', spel: '#金额 >= 100' }],
+    examples: [{ nl: '金额不小于100', spel: '#amount >= 100' }],
     difficulty: 'easy',
     confidence: 0.95,
   },
   {
     id: 'CN-CMP-LE',
-    match:
-      /^(?<field>[^\s，,、]+?)\s*(?:金额|值)?\s*(?:不大于|不超过|小于等于|<=)\s*(?<value>\d+(?:\.\d+)?)/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:不大于|不超过|小于等于|<=)\s*(?<value>\d+(?:\.\d+)?)/,
     spelTemplate: '#{field} <= {value}',
     slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
     priority: 93,
     tags: ['comparison', 'le', 'chinese'],
-    examples: [{ nl: '金额不超过500', spel: '#金额 <= 500' }],
+    examples: [{ nl: '金额不超过500', spel: '#amount <= 500' }],
     difficulty: 'easy',
     confidence: 0.95,
   },
   {
     id: 'CN-CMP-GT',
-    match:
-      /^(?<field>[^\s，,、]+?)\s*(?:金额|值|数量|价格)?\s*(?:大于|超过|高于)\s*(?<value>\d+(?:\.\d+)?)/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:大于|超过|高于)\s*(?<value>\d+(?:\.\d+)?)/,
     spelTemplate: '#{field} > {value}',
     slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
     priority: 92,
@@ -153,8 +150,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
   {
     id: 'CN-CMP-LT',
-    match:
-      /^(?<field>[^\s，,、]+?)\s*(?:金额|值|数量|价格)?\s*(?:小于|低于|不到)\s*(?<value>\d+(?:\.\d+)?)/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:小于|低于|不到)\s*(?<value>\d+(?:\.\d+)?)/,
     spelTemplate: '#{field} < {value}',
     slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
     priority: 92,
@@ -170,7 +166,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
 
   {
     id: 'CN-EQ-STATUS',
-    match: /^(?<field>[^\s，,、]+?)\s*(?:状态|类型)?\s*(?:等于|是|为)\s*(?<value>[^\s，,、]+)$/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:等于|是|为)\s*(?<value>[^\s，,、]+)$/,
     spelTemplate: "#{field} == '{value}'",
     slots: { value: { key: 'value', type: 'string' } },
     priority: 85,
@@ -194,7 +190,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   // CN: "order status is not cancelled" — must be before NOT pattern
   {
     id: 'CN-NE-STATUS',
-    match: /^(?<field>[^\s，,、]+?)\s*(?:状态|类型)?\s*(?:不等于|!=|不是)\s*(?<value>[^\s，,、]+)$/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:不等于|!=|不是)\s*(?<value>[^\s，,、]+)$/,
     spelTemplate: "#{field} != '{value}'",
     slots: { value: { key: 'value', type: 'string' } },
     priority: 91,
@@ -218,12 +214,12 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   // CN/EN: count equality
   {
     id: 'CN-EQ-COUNT',
-    match: /^(?<field>[^\s，,、]+?)\s*(?:数量|个数|计数)?\s*(?:等于|==)\s*(?<value>\d+)/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:等于|==)\s*(?<value>\d+)/,
     spelTemplate: '#{field} == {value}',
     slots: { value: { key: 'value', type: 'number', transform: 'toNumber' } },
     priority: 91,
     tags: ['comparison', 'eq', 'number'],
-    examples: [{ nl: '数量等于5', spel: '#数量 == 5' }],
+    examples: [{ nl: '数量等于5', spel: '#count == 5' }],
     difficulty: 'easy',
     confidence: 0.95,
   },
@@ -267,7 +263,9 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
   {
     id: 'CN-PERM-PERM',
-    match: /^(?<field>[^\s，,、]+)\s*(?:可以|能够|允许|may|can)\s+(?<permission>.+)$/i,
+    // Chinese-only operator: keeping the English "can"/"may" here would let the
+    // pattern fire on the "can" inside "not cancelled".
+    match: /^(?<field>[^\s，,、]+)\s*(?:可以|能够|允许)\s*(?<permission>.+)$/,
     spelTemplate: "hasPermission('{permission}')",
     slots: { permission: { key: 'permission', type: 'string' } },
     priority: 88,
@@ -294,8 +292,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
 
   {
     id: 'CN-COLL-EMPTY',
-    match:
-      /^(?<field>[^\s，,、]+?)\s*(?:列表|数组|集合)?\s*(?:为空|是空的|没有|无)\s*(?:元素|数据|项)?$/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:为空|是空的|没有|无)\s*(?:元素|数据|项)?$/,
     spelTemplate: '#{field}.isEmpty()',
     slots: {},
     priority: 89,
@@ -317,7 +314,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
   {
     id: 'CN-COLL-NOTEMPTY',
-    match: /^(?<field>[^\s，,、]+?)\s*(?:列表|数组|集合)?\s*(?:不为空|有)\s*(?:元素|数据|项)?$/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:不为空|有)\s*(?:元素|数据|项)?$/,
     spelTemplate: '!#{field}.isEmpty()',
     slots: {},
     priority: 89,
@@ -339,8 +336,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
   {
     id: 'CN-COLL-CONTAINS',
-    match:
-      /^(?<field>[^\s，,、]+?)\s*(?:列表|数组|集合)?\s*(?:中\s*)?(?:包含|含有|有)\s*(?<element>[^\s，,、]+)/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:中\s*)?(?:包含|含有|有)\s*(?<element>[^\s，,、]+)/,
     spelTemplate: "#{field}.contains('{element}')",
     slots: { element: { key: 'element', type: 'string' } },
     priority: 87,
@@ -363,7 +359,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   {
     id: 'CN-COLL-SIZE',
     match:
-      /^(?<field>[^\s，,、]+?)\s*(?:列表|数组|集合)?\s*(?:数量|个数|大小|长度)\s*(?<op>大于|>|超过|小于|<|等于|==)\s*(?<value>\d+)/,
+      /^(?<field>[^\s，,、]+?)\s*(?:数量|个数|大小|长度)\s*(?<op>大于|>|超过|小于|<|等于|==)\s*(?<value>\d+)/,
     spelTemplate: '#{field}.size() {op} {value}',
     slots: {
       value: { key: 'value', type: 'number', transform: 'toNumber' },
@@ -396,8 +392,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
 
   {
     id: 'CN-STR-CONTAINS',
-    match:
-      /^(?<field>[^\s，,、]+?)(?:备注|名称|描述|标签|标题)?\s*(?:包含|含有|包括)\s*(?<substr>[^\s，,、]+)/,
+    match: /^(?<field>[^\s，,、]+?)\s*(?:包含|含有|包括)\s*(?<substr>[^\s，,、]+)/,
     spelTemplate: "#{field}.contains('{substr}')",
     slots: { substr: { key: 'substr', type: 'string' } },
     priority: 85,
@@ -446,7 +441,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     slots: { suffix: { key: 'suffix', type: 'string' } },
     priority: 85,
     tags: ['string', 'endsWith'],
-    examples: [{ nl: '文件名以.pdf结尾', spel: "#文件名.endsWith('.pdf')" }],
+    examples: [{ nl: '文件名以.pdf结尾', spel: "#name.endsWith('.pdf')" }],
     difficulty: 'easy',
     confidence: 0.95,
   },
@@ -529,7 +524,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     slots: { default: { key: 'default', type: 'string' } },
     priority: 78,
     tags: ['elvis'],
-    examples: [{ nl: '用户名或者匿名用户', spel: "#用户名 ?: '匿名用户'" }],
+    examples: [{ nl: '用户名或者匿名用户', spel: "#name ?: '匿名用户'" }],
     difficulty: 'medium',
     confidence: 0.85,
   },
@@ -642,7 +637,11 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
 
   {
     id: 'CN-BOOL-TRUE',
-    match: /^(?<field>[^\s，,、]+?)\s*(?:是|为|等于|==)\s*(?:true|真|是|yes)$/i,
+    // "用户是VIP" asserts the subject through a Latin marker, so accept either a
+    // truth word or a Latin word. A fully open marker would fire on function
+    // words ("一个非常…"), and the lookbehind keeps a negator out of the field
+    // ("用户不" is not the subject).
+    match: /^(?<field>[^\s，,、]+?)(?<![不非])\s*(?:是|为|等于|==)\s*(?:true|真|是|yes|[A-Za-z]\w*)$/,
     spelTemplate: '#{field} == true',
     slots: {},
     priority: 74,
@@ -653,7 +652,10 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   },
   {
     id: 'CN-BOOL-FALSE',
-    match: /^(?<field>[^\s，,、]+?)\s*(?:不是|非|为|是|等于|==)\s*(?:false|假|否|no)$/i,
+    // Mirror of CN-BOOL-TRUE. The marker stays narrow so that function words
+    // ("非常…") do not match, and the lookbehind keeps "不是有效" with
+    // CN-LOGIC-NOT instead of capturing "不" as the field.
+    match: /^(?<field>[^\s，,、]+?)(?<![不非])\s*(?:不是|非|为|是|等于|==)\s*(?:false|假|否|no|[A-Za-z]\w*)$/,
     spelTemplate: '#{field} == false',
     slots: {},
     priority: 73,
@@ -765,7 +767,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
 
   {
     id: 'CN-LOGIC-NOT',
-    match: /^不是\s+(?<expr>.+)/,
+    match: /^不是\s*(?<expr>.+)/,
     spelTemplate: '!({expr})',
     slots: { expr: { key: 'expr', type: 'variable' } },
     priority: 62,
@@ -793,8 +795,8 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
   {
     id: 'CN-SELECT-FIRST',
     match:
-      /^(?<root>[^\s，,、]+?)\s*中\s*第一[个位]\s*(?<field>[^\s，,、]+?)\s*(?:大于|>|超过|<|小于|等于|==)\s*(?<value>[^\s，,、]+)/,
-    spelTemplate: '#{root}.items.^[#{this}.{field} > {value}]',
+      /^(?<root>[^\s，,、]+?)\s*中\s*第一[个位]\s*(?<field>[^\s，,、]+?)\s*(?:大于|>|超过|<|小于|等于|==)\s*(?<value>[^\s，,、的]+)/,
+    spelTemplate: '#{root}.items.^[#this.{field} > {value}]',
     slots: {
       root: { key: 'root', type: 'variable' },
       field: { key: 'field', type: 'variable' },
@@ -802,15 +804,15 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     },
     priority: 60,
     tags: ['selection', 'first'],
-    examples: [{ nl: '订单中第一个金额大于1000的', spel: '#订单.items.^[#this.金额 > 1000]' }],
+    examples: [{ nl: '订单中第一个金额大于1000的', spel: '#order.items.^[#this.amount > 1000]' }],
     difficulty: 'medium',
     confidence: 0.8,
   },
   {
     id: 'CN-SELECT-ALL',
     match:
-      /^(?<root>[^\s，,、]+?)\s*中\s*所有\s*(?<field>[^\s，,、]+?)\s*(?:大于|>|超过|<|小于|等于|==|包含|满足)\s*(?<value>[^\s，,、]+)/,
-    spelTemplate: '#{root}.items.?[#{this}.{field} > {value}]',
+      /^(?<root>[^\s，,、]+?)\s*中\s*所有\s*(?<field>[^\s，,、]+?)\s*(?:大于|>|超过|<|小于|等于|==|包含|满足)\s*(?<value>[^\s，,、的]+)/,
+    spelTemplate: '#{root}.items.?[#this.{field} > {value}]',
     slots: {
       root: { key: 'root', type: 'variable' },
       field: { key: 'field', type: 'variable' },
@@ -818,29 +820,29 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     },
     priority: 60,
     tags: ['selection', 'all'],
-    examples: [{ nl: '订单中所有金额大于1000的', spel: '#订单.items.?[#this.金额 > 1000]' }],
+    examples: [{ nl: '订单中所有金额大于1000的', spel: '#order.items.?[#this.amount > 1000]' }],
     difficulty: 'medium',
     confidence: 0.8,
   },
   {
     id: 'CN-PROJ',
     match:
-      /^(?<root>[^\s，,、]+?)\s*中\s*每[个一]\s*(?:的)?(?<field>[^\s，,、]+?)\s*(?:值|金额|名称|价格|name|amount|price)?/,
-    spelTemplate: '#{root}.items.![#{this}.{field}]',
+      /^(?<root>[^\s，,、]+?)\s*中\s*每[个一]\s*(?:的)?(?<field>[^\s，,、]+?)\s*(?:的)?(?:值|金额|名称|价格|name|amount|price)?$/,
+    spelTemplate: '#{root}.items.![#this.{field}]',
     slots: {
       root: { key: 'root', type: 'variable' },
       field: { key: 'field', type: 'variable' },
     },
     priority: 55,
     tags: ['projection'],
-    examples: [{ nl: '订单中每个商品的价格', spel: '#订单.items.![#this.商品]' }],
+    examples: [{ nl: '订单中每个商品的价格', spel: '#order.items.![#this.商品]' }],
     difficulty: 'medium',
     confidence: 0.75,
   },
   {
     id: 'EN-SELECT-ALL',
     match: /all\s+(?<root>\w+)\s+with\s+(?<field>\w+)\s*>\s*(?<value>\d+)/i,
-    spelTemplate: '#{root}.items.?[#{this}.{field} > {value}]',
+    spelTemplate: '#{root}.items.?[#this.{field} > {value}]',
     slots: {
       root: { key: 'root', type: 'variable' },
       field: { key: 'field', type: 'variable' },
@@ -848,7 +850,7 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     },
     priority: 50,
     tags: ['selection', 'all', 'english'],
-    examples: [{ nl: 'all items with price > 100', spel: '#items.items.?[#this.price > 100]' }],
+    examples: [{ nl: 'all items with price > 100', spel: '#order.items.?[#this.price > 100]' }],
     difficulty: 'medium',
     confidence: 0.8,
   },
