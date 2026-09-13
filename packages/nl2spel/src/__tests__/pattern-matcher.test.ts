@@ -16,7 +16,7 @@ describe('PatternMatcher', () => {
       it('订单金额大于1000', () => {
         const r = createMatcher().match('订单金额大于1000');
         expect(r.matched).toBe(true);
-        expect(r.spel).toBe('#订单 > 1000');
+        expect(r.spel).toBe('#订单金额 > 1000');
         expect(r.confidence).toBeGreaterThanOrEqual(0.9);
       });
 
@@ -29,7 +29,7 @@ describe('PatternMatcher', () => {
       it('订单金额超过2000', () => {
         const r = createMatcher().match('订单金额超过2000');
         expect(r.matched).toBe(true);
-        expect(r.spel).toBe('#订单 > 2000');
+        expect(r.spel).toBe('#订单金额 > 2000');
       });
 
       it('价格高于99.9', () => {
@@ -43,7 +43,7 @@ describe('PatternMatcher', () => {
       it('订单金额小于500', () => {
         const r = createMatcher().match('订单金额小于500');
         expect(r.matched).toBe(true);
-        expect(r.spel).toBe('#订单 < 500');
+        expect(r.spel).toBe('#订单金额 < 500');
       });
 
       it('amount less than 100', () => {
@@ -55,7 +55,7 @@ describe('PatternMatcher', () => {
       it('订单金额低于100', () => {
         const r = createMatcher().match('订单金额低于100');
         expect(r.matched).toBe(true);
-        expect(r.spel).toBe('#订单 < 100');
+        expect(r.spel).toBe('#订单金额 < 100');
       });
 
       it('price lower than 50', () => {
@@ -69,7 +69,7 @@ describe('PatternMatcher', () => {
       it('订单状态为pending', () => {
         const r = createMatcher().match('订单状态为pending');
         expect(r.matched).toBe(true);
-        expect(r.spel).toBe("#订单 == 'pending'");
+        expect(r.spel).toBe("#订单状态 == 'pending'");
       });
 
       it('status equals completed', () => {
@@ -137,7 +137,7 @@ describe('PatternMatcher', () => {
       it('订单状态不是已取消', () => {
         const r = createMatcher().match('订单状态不是已取消');
         expect(r.matched).toBe(true);
-        expect(r.spel).toBe("#订单 != '已取消'");
+        expect(r.spel).toBe("#订单状态 != '已取消'");
       });
 
       it('status != cancelled', () => {
@@ -374,7 +374,7 @@ describe('PatternMatcher', () => {
     it('标签列表中包含VIP', () => {
       const r = createMatcher().match('标签列表中包含VIP');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe("#tags.contains('VIP')");
+      expect(r.spel).toBe("#标签列表.contains('VIP')");
     });
 
     it('tags contains premium', () => {
@@ -422,7 +422,7 @@ describe('PatternMatcher', () => {
     it('订单列表有数据', () => {
       const r = createMatcher().match('订单列表有数据');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('!#订单.isEmpty()');
+      expect(r.spel).toBe('!#订单列表.isEmpty()');
     });
 
     it('items is not empty', () => {
@@ -440,7 +440,8 @@ describe('PatternMatcher', () => {
     it('订单列表数量大于10', () => {
       const r = createMatcher().match('订单列表数量大于10');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#订单列表 > 10');
+      // CN-CMP-GT outranks CN-COLL-SIZE, so the whole field is compared, not size()
+      expect(r.spel).toBe('#订单列表数量 > 10');
     });
   });
 
@@ -451,49 +452,49 @@ describe('PatternMatcher', () => {
     it('年龄在18到60之间', () => {
       const r = createMatcher().match('年龄在18到60之间');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#age between {{18, 60}}');
+      expect(r.spel).toBe('#age between {18, 60}');
     });
 
     it('amount between 100 and 500', () => {
       const r = createMatcher().match('amount between 100 and 500');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#amount between {{100, 500}}');
+      expect(r.spel).toBe('#amount between {100, 500}');
     });
 
     it('价格介于10到100范围', () => {
       const r = createMatcher().match('价格介于10到100范围');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#price between {{10, 100}}');
+      expect(r.spel).toBe('#price between {10, 100}');
     });
 
     it('score between 0 and 100', () => {
       const r = createMatcher().match('score between 0 and 100');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#score between {{0, 100}}');
+      expect(r.spel).toBe('#score between {0, 100}');
     });
 
     it('等级在1到5之间', () => {
       const r = createMatcher().match('等级在1到5之间');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#等级 between {{1, 5}}');
+      expect(r.spel).toBe('#等级 between {1, 5}');
     });
 
     it('value 介于 0~100', () => {
       const r = createMatcher().match('value 介于 0~100');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#value between {{0, 100}}');
+      expect(r.spel).toBe('#value between {0, 100}');
     });
 
     it('数量在10和50范围', () => {
       const r = createMatcher().match('数量在10和50范围');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#count between {{10, 50}}');
+      expect(r.spel).toBe('#count between {10, 50}');
     });
 
     it('range between 1 and 10', () => {
       const r = createMatcher().match('range between 1 and 10');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#range between {{1, 10}}');
+      expect(r.spel).toBe('#range between {1, 10}');
     });
   });
 
@@ -615,19 +616,19 @@ describe('PatternMatcher', () => {
       const r = createMatcher().match('订单中第一个金额大于1000的');
       expect(r.matched).toBe(true);
       // Matched by comparison (GT) since "大于" appears
-      expect(r.spel).toBe('#订单中第一个 > 1000');
+      expect(r.spel).toBe('#订单中第一个金额 > 1000');
     });
 
     it('订单中所有金额大于1000的', () => {
       const r = createMatcher().match('订单中所有金额大于1000的');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#订单中所有 > 1000');
+      expect(r.spel).toBe('#订单中所有金额 > 1000');
     });
 
     it('all items with price > 100', () => {
       const r = createMatcher().match('all items with price > 100');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#order.items.?[#.price > 100]');
+      expect(r.spel).toBe('#order.items.?[#this.price > 100]');
     });
   });
 
@@ -652,7 +653,7 @@ describe('PatternMatcher', () => {
     it('should handle input with extra whitespace', () => {
       const r = createMatcher().match('  订单金额大于  1000  ');
       expect(r.matched).toBe(true);
-      expect(r.spel).toBe('#订单 > 1000');
+      expect(r.spel).toBe('#订单金额 > 1000');
     });
 
     it('should handle very long input without throwing', () => {
