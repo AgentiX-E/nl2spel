@@ -492,21 +492,21 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     id: 'CN-RANGE-BETWEEN',
     match:
       /^(?<field>[^\s，,、]+?)\s*(?:在|介于)\s*(?<min>\d+)\s*(?:和|到|~)\s*(?<max>\d+)\s*(?:之间|范围)?/,
-    spelTemplate: '#{field} between {{{min}, {max}}}',
+    spelTemplate: '#{field} between {{min}, {max}}',
     slots: {
       min: { key: 'min', type: 'number', transform: 'toNumber' },
       max: { key: 'max', type: 'number', transform: 'toNumber' },
     },
     priority: 82,
     tags: ['range', 'between'],
-    examples: [{ nl: '年龄在18到60之间', spel: '#年龄 between {18, 60}' }],
+    examples: [{ nl: '年龄在18到60之间', spel: '#age between {18, 60}' }],
     difficulty: 'easy',
     confidence: 0.95,
   },
   {
     id: 'EN-RANGE-BETWEEN',
     match: /\b(?<field>\w+)\s+between\s+(?<min>\d+)\s+and\s+(?<max>\d+)/i,
-    spelTemplate: '#{field} between {{{min}, {max}}}',
+    spelTemplate: '#{field} between {{min}, {max}}',
     slots: {
       min: { key: 'min', type: 'number', transform: 'toNumber' },
       max: { key: 'max', type: 'number', transform: 'toNumber' },
