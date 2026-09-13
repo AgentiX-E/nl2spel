@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { StrategyRouter } from '../strategy/strategy-router.js';
 import { ProviderRegistry } from '../provider/provider-registry.js';
+import { UnconvertibleClauseError } from '../pattern/clause-splitter.js';
 import type { LLMProvider, LLMCapabilities } from '../provider/llm-provider.js';
 
 function createMockLLMProvider(
@@ -596,6 +597,65 @@ describe('StrategyRouter', () => {
       // AutoFix should have replaced === with ==
       expect(result.expression).not.toContain('===');
       expect(result.expression).toContain('==');
+    });
+  });
+
+  // ===== Layer 0: compound sentences =====
+  describe('Layer 0: Compound sentences', () => {
+    it('converts a compound sentence clause by clause', async () => {
+      const router = new StrategyRouter(new ProviderRegistry());
+      const result = await router.generate('金额大于1000且金额小于5000');
+
+      expect(result.strategy).toBe('pattern');
+      expect(result.expression).toBe('(#amount > 1000) and (#amount < 5000)');
+      expect(result.metadata.clauses).toEqual(['金额大于1000', '金额小于5000']);
+    });
+
+    it("reports the lowest clause confidence rather than one pattern's", async () => {
+      const router = new StrategyRouter(new ProviderRegistry());
+      const result = await router.generate('金额大于1000且金额小于5000');
+
+      // Both clauses are comparisons, so the joined confidence is their minimum
+      // rather than whichever pattern happened to match the whole sentence.
+      expect(result.confidence).toBe(0.95);
+    });
+
+    it('prefers a logic pattern over decomposition', async () => {
+      const router = new StrategyRouter(new ProviderRegistry());
+      const result = await router.generate('a and b');
+
+      expect(result.expression).toBe('(a) and (b)');
+      expect(result.metadata.patternId).toBe('EN-LOGIC-AND');
+    });
+
+    it('refuses an unconvertible compound sentence instead of truncating it', async () => {
+      // No provider is registered, so a refusal is the only honest answer: the
+      // alternative is the truncated `#amount > 1000` this replaced.
+      const router = new StrategyRouter(new ProviderRegistry());
+
+      await expect(router.generate('金额大于1000且订单已确认')).rejects.toThrow(
+        UnconvertibleClauseError,
+      );
+    });
+
+    it('offers the whole sentence to the LLM when a clause cannot be converted', async () => {
+      const registry = new ProviderRegistry();
+      registry.register(
+        createMockLLMProvider('openai', '#order.amount > 1000 and #order.confirmed'),
+      );
+      const router = new StrategyRouter(registry);
+
+      const result = await router.generate('金额大于1000且订单已确认');
+
+      // Falling back to the whole-sentence pattern match would reintroduce the
+      // truncation, so the remaining layers get the sentence as written.
+      expect(result.strategy).toBe('llm-api');
+      expect(result.expression).toContain('#order.confirmed');
+    });
+
+    it('returns no decomposition for a sentence without a connector', () => {
+      const router = new StrategyRouter(new ProviderRegistry());
+      expect(router.decomposeClauses('金额大于1000')).toBeNull();
     });
   });
 });

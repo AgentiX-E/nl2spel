@@ -40,9 +40,15 @@ export type {
   SlotDefinition,
   SlotTransform,
 } from './pattern/pattern-definition.js';
-export { PatternMatcher } from './pattern/pattern-matcher.js';
-export type { PatternMatchResult } from './pattern/pattern-matcher.js';
+export { PatternMatcher, UnmappedFieldError } from './pattern/pattern-matcher.js';
+export type {
+  PatternMatchResult,
+  FieldPolicy,
+  PatternMatcherOptions,
+} from './pattern/pattern-matcher.js';
 export { BUILTIN_PATTERNS } from './pattern/builtin-patterns.js';
+export { splitClauses, decompose, UnconvertibleClauseError } from './pattern/clause-splitter.js';
+export type { Clause, Decomposition } from './pattern/clause-splitter.js';
 
 // Template (Layer 1)
 export { NLIntent } from './template/nl-intent.js';

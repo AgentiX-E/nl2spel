@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { NL2SpelEngine } from '../engine/nl2spel-engine.js';
+import { UnconvertibleClauseError } from '../pattern/clause-splitter.js';
 import type { LLMProvider, LLMCapabilities } from '../provider/llm-provider.js';
 
 function createMockLLMProvider(
@@ -74,13 +75,27 @@ describe('NL2SpelEngine', () => {
     });
   });
 
-  // ===== Medium: Template =====
-  describe('generate (Template)', () => {
-    it('should fall through to template for logical combinations', async () => {
+  // ===== Compound sentences =====
+  describe('generate (Compound sentences)', () => {
+    it('converts a compound sentence clause by clause', async () => {
       const engine = new NL2SpelEngine();
-      const result = await engine.generate('金额大于100且订单已确认');
-      expect(result.expression.length).toBeGreaterThan(0);
-      expect(result.confidence).toBeGreaterThan(0);
+      const result = await engine.generate('金额大于1000且金额小于5000', { offlineOnly: true });
+
+      expect(result.expression).toBe('(#amount > 1000) and (#amount < 5000)');
+      expect(result.strategy).toBe('pattern');
+    });
+
+    it('refuses a compound sentence it cannot convert, rather than truncating', async () => {
+      // This input used to return `#amount > 100`: the comparison pattern matched
+      // the prefix and the `且` half was silently discarded, so the caller
+      // received a materially weaker rule than the one they asked for. A partial
+      // rule must never be emitted, so the request fails instead — naming the
+      // clause it could not convert.
+      const engine = new NL2SpelEngine();
+
+      await expect(
+        engine.generate('金额大于100且订单已确认', { offlineOnly: true }),
+      ).rejects.toThrow(UnconvertibleClauseError);
     });
   });
 
@@ -228,7 +243,12 @@ describe('NL2SpelEngine', () => {
         root: {
           name: 'invoice',
           type: 'Invoice',
-          fields: { total: { type: 'number' as const } },
+          // `金额大于100` resolves to `#amount`, so the schema has to declare
+          // `amount` for the rule to be resolvable. It previously passed with a
+          // schema that did not, because the context stage could not reject
+          // anything; now that it can, a schema that disagrees with the
+          // generated reference fails — which is the point of supplying one.
+          fields: { amount: { type: 'number' as const } },
           methods: {},
         },
         variables: {},

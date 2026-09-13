@@ -1,5 +1,5 @@
 import { NLIntent } from './nl-intent.js';
-import type { IntentResult } from './intent-classifier.js';
+import { detectNullPredicate, type IntentResult } from './intent-classifier.js';
 import type { ContextSchema } from '@agentix-e/spel-ts';
 
 export interface TemplateResult {
@@ -32,6 +32,77 @@ interface TemplateEntry {
   };
   confidence: number;
 }
+
+/**
+ * Chinese field words → SpEL identifiers. Mirrors the pattern layer's mapping
+ * so both layers resolve "备注" to the same "#...remark".
+ */
+const CHINESE_FIELD_MAP: Record<string, string> = {
+  备注: 'remark',
+  说明: 'description',
+  描述: 'description',
+  金额: 'amount',
+  数量: 'count',
+  个数: 'count',
+  状态: 'status',
+  类型: 'type',
+  名称: 'name',
+  标题: 'title',
+  地址: 'address',
+  邮箱: 'email',
+  手机: 'phone',
+  电话: 'phone',
+  日期: 'date',
+  时间: 'time',
+  年龄: 'age',
+  价格: 'price',
+  用户名: 'name',
+  权限: 'role',
+  标签: 'tags',
+  列表: 'list',
+  数组: 'items',
+  文件: 'file',
+  文件名: 'name',
+  过期: 'expiryDate',
+  创建: 'createdAt',
+  有效: 'valid',
+  活跃: 'active',
+  激活: 'active',
+};
+
+/** Field words ordered longest-first so "文件名" wins over the "文件" prefix. */
+const CHINESE_FIELDS_BY_LENGTH = Object.entries(CHINESE_FIELD_MAP).sort(
+  (a, b) => b[0].length - a[0].length,
+);
+
+/** Identifier-like tokens that are keywords or roots, never field names. */
+const FIELD_STOPWORDS = new Set([
+  'a',
+  'an',
+  'account',
+  'and',
+  'are',
+  'be',
+  'between',
+  'empty',
+  'false',
+  'file',
+  'has',
+  'have',
+  'is',
+  'no',
+  'not',
+  'null',
+  'or',
+  'order',
+  'product',
+  'than',
+  'the',
+  'true',
+  'user',
+  'value',
+  'yes',
+]);
 
 /**
  * SpEL template library — each Intent maps to a set of templates.
@@ -308,9 +379,16 @@ export class TemplateEngine {
     let bestScore = -1;
     let bestTemplate: TemplateEntry | null = null;
 
-    // Input-specific heuristics
-    const hasEmptyKeyword = /为空|empty|null/i.test(input);
-    const hasNotEmptyKeyword = /不为空|not empty|not null/i.test(input);
+    // Input-specific heuristics.
+    //
+    // The previous regexes matched the negated phrase as well ("不为空" contains
+    // "为空", and "not empty" contains "empty"), so both IS_NULL and
+    // IS_NOT_NULL were boosted equally, they tied, and the first library entry
+    // ("== null") always won. The predicate polarity is the only signal that
+    // separates an affirmative check from a negated one.
+    const polarity = detectNullPredicate(input);
+    const isAffirmative = polarity === 'affirmative';
+    const isNegated = polarity === 'negated';
 
     for (const template of templates) {
       const conditions = template.conditions;
@@ -322,9 +400,14 @@ export class TemplateEngine {
       if (conditions.hasNull) score += 0.5;
       if (conditions.hasString) score += 1;
 
-      // Boost isEmpty template when input has empty keywords
-      if (template.name.includes('IS_EMPTY') && hasEmptyKeyword) score += 2;
-      if (template.name.includes('IS_NOT_EMPTY') && hasNotEmptyKeyword) score += 2;
+      // Boost the emptiness template whose polarity matches the input.
+      if (template.name.includes('IS_EMPTY') && isAffirmative) score += 2;
+      if (template.name.includes('IS_NOT_EMPTY') && isNegated) score += 2;
+
+      // The two NULL templates carry identical conditions, so polarity is the
+      // only thing that separates "== null" from "!= null".
+      if (template.name === 'NULL-IS_NULL' && isAffirmative) score += 2;
+      if (template.name === 'NULL-IS_NOT_NULL' && isNegated) score += 2;
 
       if (conditions.entityCount) {
         if (
@@ -352,40 +435,8 @@ export class TemplateEngine {
     let expression = template;
     const unfilledSlots: string[] = [];
 
-    // Extract root name from contextSchema
-    let rootName = 'order';
-    let fieldName = 'field';
-
-    if (this.contextSchema?.root) {
-      rootName = this.contextSchema.root.name;
-      const fields = Object.keys(this.contextSchema.root.fields ?? {});
-      for (const f of fields) {
-        if (input.includes(f)) {
-          fieldName = f;
-          break;
-        }
-      }
-    } else {
-      // Heuristic root name extraction
-      const rootMap: Record<string, string> = {
-        订单: 'order',
-        order: 'order',
-        用户: 'user',
-        user: 'user',
-        文件: 'file',
-        file: 'file',
-        账号: 'account',
-        account: 'account',
-        商品: 'item',
-        product: 'item',
-      };
-      for (const [key, val] of Object.entries(rootMap)) {
-        if (input.includes(key)) {
-          rootName = val;
-          break;
-        }
-      }
-    }
+    const rootName = this.resolveRootName(input);
+    const fieldName = this.resolveFieldName(input);
 
     // Fill root
     expression = expression.replace(/\{root\}/g, rootName);
@@ -470,5 +521,63 @@ export class TemplateEngine {
     }
 
     return { expression, unfilledSlots };
+  }
+
+  /**
+   * Resolve the SpEL root name for `input`: the configured schema root when one
+   * exists, otherwise a keyword heuristic over the well-known roots.
+   */
+  private resolveRootName(input: string): string {
+    if (this.contextSchema?.root) {
+      return this.contextSchema.root.name;
+    }
+
+    const rootMap: Record<string, string> = {
+      订单: 'order',
+      order: 'order',
+      用户: 'user',
+      user: 'user',
+      文件: 'file',
+      file: 'file',
+      账号: 'account',
+      account: 'account',
+      商品: 'item',
+      product: 'item',
+    };
+    for (const [key, val] of Object.entries(rootMap)) {
+      if (input.includes(key)) return val;
+    }
+    return 'order';
+  }
+
+  /**
+   * Resolve the field name for `input`.
+   *
+   * The previous implementation only compared schema *keys* and otherwise left
+   * the literal placeholder default in place, which is how "#order.field == null"
+   * reached callers. The lookup now falls back in order: schema key, schema
+   * field description (Chinese inputs name the field by its description),
+   * Chinese field word, first English identifier, and finally "value" — the
+   * neutral default the pattern layer already uses for an unknown field.
+   */
+  private resolveFieldName(input: string): string {
+    const fields = this.contextSchema?.root?.fields;
+    if (fields) {
+      for (const [key, schema] of Object.entries(fields)) {
+        if (input.includes(key)) return key;
+        if (schema.description && input.includes(schema.description)) return key;
+      }
+    }
+
+    for (const [word, field] of CHINESE_FIELDS_BY_LENGTH) {
+      if (input.includes(word)) return field;
+    }
+
+    const tokens = input.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
+    for (const token of tokens) {
+      if (!FIELD_STOPWORDS.has(token.toLowerCase())) return token;
+    }
+
+    return 'value';
   }
 }

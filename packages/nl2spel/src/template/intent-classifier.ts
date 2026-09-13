@@ -49,7 +49,7 @@ const INTENT_KEYWORDS: Record<NLIntent, { zh: string[]; en: string[] }> = {
     en: ['greater', 'less', 'equal', 'above', 'below', 'exceed', '>', '<', '==', '!=', '>=', '<='],
   },
   [NLIntent.NULL_CHECK]: {
-    zh: ['为空', '不为空', '是空', '存在', '不存在', 'null', '没有值'],
+    zh: ['为空', '不为空', '是空', '非空', '存在', '不存在', '有值', '无值', 'null', '没有值'],
     en: ['null', 'empty', 'is null', 'is not null', 'is empty', 'is not empty'],
   },
   [NLIntent.PERMISSION_CHECK]: {
@@ -86,7 +86,10 @@ const INTENT_KEYWORDS: Record<NLIntent, { zh: string[]; en: string[] }> = {
   },
   [NLIntent.BOOLEAN]: {
     zh: ['是否', '真假', 'true', 'false', '是', '否'],
-    en: ['true', 'false', 'yes', 'no', 'is', 'is not'],
+    // "no" is deliberately absent: it is a substring of "not", so it fired on
+    // every negated null/emptiness phrase and made "remark is not empty" a
+    // boolean check. "false"/"否" already cover the negative boolean spelling.
+    en: ['true', 'false', 'yes', 'is', 'is not'],
   },
   [NLIntent.DATE]: {
     zh: ['日期', '时间', '之后', '之前', '早于', '晚于'],
@@ -105,6 +108,73 @@ const INTENT_KEYWORDS: Record<NLIntent, { zh: string[]; en: string[] }> = {
     en: ['plus', 'minus', 'multiply', 'divide', 'mod', 'sum', 'average'],
   },
 };
+
+/** Polarity of a recognised null/emptiness predicate. */
+export type NullPredicatePolarity = 'affirmative' | 'negated';
+
+/**
+ * Negated emptiness spellings that embed an affirmative one.
+ *
+ * "不为空" contains "为空" and "is not empty" contains "empty", so testing the
+ * affirmative forms first would read every negated phrase backwards — the
+ * inversion that made "备注不为空" select "== null". These are matched before
+ * anything else.
+ */
+const NULL_NEGATED_SPECIFIC = [
+  '不为空',
+  '不为null',
+  '不是空',
+  '非空',
+  'is not null',
+  'is not empty',
+];
+
+/**
+ * Affirmative null/emptiness spellings.
+ *
+ * "不存在" is matched before the bare "存在" below, for the same embedding
+ * reason as above.
+ */
+const NULL_AFFIRMATIVE = [
+  '不存在',
+  '无值',
+  '没有值',
+  '为空',
+  '为null',
+  '是空',
+  'is null',
+  'is empty',
+];
+
+/** Negated spellings that do not embed an affirmative one. */
+const NULL_NEGATED_GENERIC = ['有值', '存在'];
+
+/**
+ * Detect whether `input` expresses a null/emptiness predicate, and with which
+ * polarity. Returns null when no such predicate is present.
+ *
+ * Order matters: the specific negated forms are checked first because they
+ * contain their affirmative counterparts, then the affirmative forms (which
+ * contain the bare "存在"), then the generic negated forms.
+ */
+export function detectNullPredicate(input: string): NullPredicatePolarity | null {
+  const text = input
+    .trim()
+    .toLowerCase()
+    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(/\s+/g, ' ');
+
+  for (const token of NULL_NEGATED_SPECIFIC) {
+    if (text.includes(token)) return 'negated';
+  }
+  for (const token of NULL_AFFIRMATIVE) {
+    if (text.includes(token)) return 'affirmative';
+  }
+  for (const token of NULL_NEGATED_GENERIC) {
+    if (text.includes(token)) return 'negated';
+  }
+  return null;
+}
 
 export class IntentClassifier {
   /**
@@ -147,6 +217,13 @@ export class IntentClassifier {
     // COLLECTION boost if collection-specific keywords present
     if (/isempty|\.isEmpty|列表|数组|集合/.test(normalized)) {
       intentScores.set(NLIntent.COLLECTION, (intentScores.get(NLIntent.COLLECTION) ?? 0) + 1);
+    }
+    // A recognised null/emptiness predicate outranks the generic negation and
+    // boolean keywords ("非", "不是", "is", "not") that also fire on these
+    // phrases. Without it "remark is not empty" is read as a boolean property
+    // and "备注非空" as a logical negation.
+    if (detectNullPredicate(normalized)) {
+      intentScores.set(NLIntent.NULL_CHECK, (intentScores.get(NLIntent.NULL_CHECK) ?? 0) + 2);
     }
 
     // Step 2: Entity extraction

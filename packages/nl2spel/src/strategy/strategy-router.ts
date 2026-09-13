@@ -1,5 +1,6 @@
 import { PatternMatcher } from '../pattern/pattern-matcher.js';
 import { BUILTIN_PATTERNS } from '../pattern/builtin-patterns.js';
+import { decompose, splitClauses, UnconvertibleClauseError } from '../pattern/clause-splitter.js';
 import { IntentClassifier } from '../template/intent-classifier.js';
 import { TemplateEngine } from '../template/template-engine.js';
 import type { TemplateResult } from '../template/template-engine.js';
@@ -33,6 +34,9 @@ export interface StrategyMetadata {
   /** Matched pattern ID (pattern strategy only) */
   patternId?: string;
 
+  /** Clause texts, when a compound sentence was decomposed */
+  clauses?: string[];
+
   /** Intent type (template strategy only) */
   intent?: string;
 
@@ -50,6 +54,18 @@ export interface StrategyMetadata {
 
   /** Raw LLM output (llm strategy only) */
   rawOutput?: string;
+}
+
+/** A compound sentence converted clause by clause. */
+export interface DecomposedConversion {
+  /** The joined expression, with every operand parenthesised. */
+  expression: string;
+
+  /** The clause texts, in order. */
+  clauses: string[];
+
+  /** The lowest confidence among the converted clauses. */
+  confidence: number;
 }
 
 export interface StrategyRouterConfig {
@@ -107,25 +123,41 @@ export class StrategyRouter {
     }
 
     // ---------- Layer 0: Pattern Matching ----------
-    const patternResult = this.patternMatcher.match(nl);
+    // A compound sentence must be decomposed rather than matched whole, because
+    // the comparison patterns match a prefix of their input: matching whole would
+    // answer `金额大于1000且订单已确认` with `#amount > 1000` and silently drop
+    // the second requirement.
+    //
+    // A pattern tagged `logic` is the exception. It expresses a conjunction or a
+    // disjunction as a single SpEL expression (`a and b` -> `(a) and (b)`), so it
+    // does represent the whole sentence and is preferred over decomposition —
+    // without this, `a and b` would be split into the clauses `a` and `b`, neither
+    // of which any pattern converts.
+    const isCompound = splitClauses(nl).length > 1;
+    let clauseFailure: UnconvertibleClauseError | null = null;
 
-    if (patternResult.matched && patternResult.confidence >= this.config.patternMinConfidence!) {
-      // Validate pattern result
-      const validation = await this.validationPipeline.validate(patternResult.spel!, contextSchema);
+    const wholeMatch = this.patternMatcher.match(nl);
+    const wholeIsFaithful =
+      wholeMatch.matched &&
+      wholeMatch.confidence >= this.config.patternMinConfidence! &&
+      (!isCompound || (wholeMatch.pattern?.tags.includes('logic') ?? false));
+
+    if (wholeIsFaithful) {
+      const validation = await this.validationPipeline.validate(wholeMatch.spel!, contextSchema);
 
       if (validation.valid) {
         return {
-          expression: patternResult.spel!,
+          expression: wholeMatch.spel!,
           strategy: 'pattern',
-          confidence: patternResult.confidence,
-          metadata: { patternId: patternResult.pattern?.id },
+          confidence: wholeMatch.confidence,
+          metadata: { patternId: wholeMatch.pattern?.id },
           latencyMs: Date.now() - startTime,
         };
       }
 
       // Pattern result validation failed, try AutoFix
       try {
-        const afResult = this.autoFixer.fix(patternResult.spel!);
+        const afResult = this.autoFixer.fix(wholeMatch.spel!);
         if (afResult.wasFixed) {
           const afValidation = await this.validationPipeline.validate(
             afResult.expression,
@@ -135,8 +167,8 @@ export class StrategyRouter {
             return {
               expression: afResult.expression,
               strategy: 'pattern',
-              confidence: patternResult.confidence * 0.95,
-              metadata: { patternId: patternResult.pattern?.id },
+              confidence: wholeMatch.confidence * 0.95,
+              metadata: { patternId: wholeMatch.pattern?.id },
               latencyMs: Date.now() - startTime,
             };
           }
@@ -144,6 +176,37 @@ export class StrategyRouter {
       } catch {
         // AutoFix failed, fall through to template/LLM layers
       }
+    }
+
+    if (isCompound && !wholeIsFaithful) {
+      let decomposition: DecomposedConversion | null = null;
+      try {
+        decomposition = this.decomposeClauses(nl);
+      } catch (error) {
+        if (!(error instanceof UnconvertibleClauseError)) throw error;
+        clauseFailure = error;
+      }
+
+      if (decomposition) {
+        const validation = await this.validationPipeline.validate(
+          decomposition.expression,
+          contextSchema,
+        );
+        if (validation.valid) {
+          return {
+            expression: decomposition.expression,
+            strategy: 'pattern',
+            confidence: decomposition.confidence,
+            metadata: { clauses: decomposition.clauses },
+            latencyMs: Date.now() - startTime,
+          };
+        }
+      }
+      // A clause that could not be converted, or a joined expression that did not
+      // validate, must NOT fall back to a whole-sentence match by a non-`logic`
+      // pattern: that match is the truncation this stage exists to prevent. The
+      // remaining layers are offered the whole sentence instead, and
+      // `clauseFailure` is surfaced if they cannot answer either.
     }
 
     // ---------- Layer 1: Template ----------
@@ -196,7 +259,10 @@ export class StrategyRouter {
     }
 
     if (providers.length === 0) {
-      throw new Error('No LLM providers available');
+      // A compound sentence whose clauses could not all be converted is reported
+      // as such: that is more useful than "no providers", and it is the honest
+      // statement of why no rule can be produced.
+      throw clauseFailure ?? new Error('No LLM providers available');
     }
 
     let lastError: Error | null = null;
@@ -252,6 +318,37 @@ export class StrategyRouter {
   /**
    * Get PatternMatcher (for external testing/debugging)
    */
+  /**
+   * Convert a sentence that joins its clauses with a logical connector.
+   *
+   * Returns `null` when `nl` has no top-level connector, in which case the caller
+   * should use its ordinary single-pass conversion. Throws
+   * {@link UnconvertibleClauseError} when a clause cannot be converted, so the
+   * caller can refuse instead of emitting a partial rule.
+   */
+  public decomposeClauses(nl: string): DecomposedConversion | null {
+    if (splitClauses(nl).length <= 1) return null;
+
+    const confidences: number[] = [];
+    const convert = (clause: string): string | null => {
+      const result = this.patternMatcher.match(clause);
+      if (!result.matched || result.confidence < this.config.patternMinConfidence!) {
+        return null;
+      }
+      confidences.push(result.confidence);
+      return result.spel!;
+    };
+
+    const decomposition = decompose(nl, convert);
+    if (decomposition === null) return null;
+
+    return {
+      expression: decomposition.expression,
+      clauses: decomposition.clauses,
+      confidence: confidences.length > 0 ? Math.min(...confidences) : 0,
+    };
+  }
+
   public getPatternMatcher(): PatternMatcher {
     return this.patternMatcher;
   }
