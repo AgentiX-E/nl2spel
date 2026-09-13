@@ -173,12 +173,20 @@ export class NL2SpelEngine {
 
     // Offline mode
     if (options.offlineOnly) {
-      // A compound sentence is decomposed rather than matched whole. Matching the
-      // whole sentence would answer `金额大于1000且订单已确认` with
-      // `#amount > 1000` and drop the second requirement without any signal. When
-      // the clauses cannot all be converted the request fails, naming the clause
-      // it could not convert, rather than returning a partial rule.
-      if (splitClauses(nl).length > 1) {
+      // A compound sentence is decomposed rather than matched whole, because the
+      // comparison patterns match a prefix of their input: matching whole would
+      // answer `金额大于1000且订单已确认` with `#amount > 1000` and silently drop
+      // the second requirement. A pattern tagged `logic` expresses the whole
+      // sentence already, so it is preferred over decomposition.
+      const patternMatcher = this.router.getPatternMatcher();
+      const patternResult = patternMatcher.match(nl);
+      const isCompound = splitClauses(nl).length > 1;
+      const wholeIsFaithful =
+        patternResult.matched && (patternResult.pattern?.tags.includes('logic') ?? false);
+
+      if (isCompound && !wholeIsFaithful) {
+        // Throws UnconvertibleClauseError, naming the clause it could not convert,
+        // rather than returning a partial rule.
         const decomposition = this.router.decomposeClauses(nl);
         if (decomposition) {
           return {
@@ -192,9 +200,6 @@ export class NL2SpelEngine {
           `Cannot generate expression offline: '${nl}' joins clauses but they could not all be converted.`,
         );
       }
-
-      const patternMatcher = this.router.getPatternMatcher();
-      const patternResult = patternMatcher.match(nl);
 
       if (patternResult.matched) {
         return {

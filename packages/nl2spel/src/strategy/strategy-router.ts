@@ -127,13 +127,62 @@ export class StrategyRouter {
     }
 
     // ---------- Layer 0: Pattern Matching ----------
-    // A compound sentence is decomposed rather than matched whole. The comparison
-    // patterns match a prefix of their input, so matching whole would answer
-    // `金额大于1000且订单已确认` with `#amount > 1000` and silently drop the
-    // second requirement.
+    // A compound sentence must be decomposed rather than matched whole, because
+    // the comparison patterns match a prefix of their input: matching whole would
+    // answer `金额大于1000且订单已确认` with `#amount > 1000` and silently drop
+    // the second requirement.
+    //
+    // A pattern tagged `logic` is the exception. It expresses a conjunction or a
+    // disjunction as a single SpEL expression (`a and b` -> `(a) and (b)`), so it
+    // does represent the whole sentence and is preferred over decomposition —
+    // without this, `a and b` would be split into the clauses `a` and `b`, neither
+    // of which any pattern converts.
+    const isCompound = splitClauses(nl).length > 1;
     let clauseFailure: UnconvertibleClauseError | null = null;
 
-    if (splitClauses(nl).length > 1) {
+    const wholeMatch = this.patternMatcher.match(nl);
+    const wholeIsFaithful =
+      wholeMatch.matched &&
+      wholeMatch.confidence >= this.config.patternMinConfidence! &&
+      (!isCompound || (wholeMatch.pattern?.tags.includes('logic') ?? false));
+
+    if (wholeIsFaithful) {
+      const validation = await this.validationPipeline.validate(wholeMatch.spel!, contextSchema);
+
+      if (validation.valid) {
+        return {
+          expression: wholeMatch.spel!,
+          strategy: 'pattern',
+          confidence: wholeMatch.confidence,
+          metadata: { patternId: wholeMatch.pattern?.id },
+          latencyMs: Date.now() - startTime,
+        };
+      }
+
+      // Pattern result validation failed, try AutoFix
+      try {
+        const afResult = this.autoFixer.fix(wholeMatch.spel!);
+        if (afResult.wasFixed) {
+          const afValidation = await this.validationPipeline.validate(
+            afResult.expression,
+            contextSchema,
+          );
+          if (afValidation.valid) {
+            return {
+              expression: afResult.expression,
+              strategy: 'pattern',
+              confidence: wholeMatch.confidence * 0.95,
+              metadata: { patternId: wholeMatch.pattern?.id },
+              latencyMs: Date.now() - startTime,
+            };
+          }
+        }
+      } catch {
+        // AutoFix failed, fall through to template/LLM layers
+      }
+    }
+
+    if (isCompound && !wholeIsFaithful) {
       let decomposition: DecomposedConversion | null = null;
       try {
         decomposition = this.decomposeClauses(nl);
@@ -158,52 +207,10 @@ export class StrategyRouter {
         }
       }
       // A clause that could not be converted, or a joined expression that did not
-      // validate, must NOT fall back to the whole-string match: that match is the
-      // truncation this stage exists to prevent. The remaining layers are offered
-      // the whole sentence instead, and `clauseFailure` is surfaced if they cannot
-      // answer either.
-    } else {
-      const patternResult = this.patternMatcher.match(nl);
-
-      if (patternResult.matched && patternResult.confidence >= this.config.patternMinConfidence!) {
-        // Validate pattern result
-        const validation = await this.validationPipeline.validate(
-          patternResult.spel!,
-          contextSchema,
-        );
-
-        if (validation.valid) {
-          return {
-            expression: patternResult.spel!,
-            strategy: 'pattern',
-            confidence: patternResult.confidence,
-            metadata: { patternId: patternResult.pattern?.id },
-            latencyMs: Date.now() - startTime,
-          };
-        }
-
-        // Pattern result validation failed, try AutoFix
-        try {
-          const afResult = this.autoFixer.fix(patternResult.spel!);
-          if (afResult.wasFixed) {
-            const afValidation = await this.validationPipeline.validate(
-              afResult.expression,
-              contextSchema,
-            );
-            if (afValidation.valid) {
-              return {
-                expression: afResult.expression,
-                strategy: 'pattern',
-                confidence: patternResult.confidence * 0.95,
-                metadata: { patternId: patternResult.pattern?.id },
-                latencyMs: Date.now() - startTime,
-              };
-            }
-          }
-        } catch {
-          // AutoFix failed, fall through to template/LLM layers
-        }
-      }
+      // validate, must NOT fall back to a whole-sentence match by a non-`logic`
+      // pattern: that match is the truncation this stage exists to prevent. The
+      // remaining layers are offered the whole sentence instead, and
+      // `clauseFailure` is surfaced if they cannot answer either.
     }
 
     // ---------- Layer 1: Template ----------
