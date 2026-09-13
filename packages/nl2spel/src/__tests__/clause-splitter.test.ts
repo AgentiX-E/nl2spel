@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  splitClauses,
-  decompose,
-  UnconvertibleClauseError,
-} from '../pattern/clause-splitter.js';
+import { splitClauses, decompose, UnconvertibleClauseError } from '../pattern/clause-splitter.js';
 import { PatternMatcher } from '../pattern/pattern-matcher.js';
 import { BUILTIN_PATTERNS } from '../pattern/builtin-patterns.js';
 
@@ -33,10 +29,7 @@ describe('splitClauses', () => {
   });
 
   it('splits on English conjunctions only at word boundaries', () => {
-    expect(texts('amount > 1000 and amount < 5000')).toEqual([
-      'amount > 1000',
-      'amount < 5000',
-    ]);
+    expect(texts('amount > 1000 and amount < 5000')).toEqual(['amount > 1000', 'amount < 5000']);
     // `android` and `ampersand` merely contain the letters of "and" and must not
     // split. Matching a slice rather than the whole input would lose the
     // preceding character and turn these into conjunctions.

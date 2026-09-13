@@ -78,7 +78,9 @@ describe('BUILTIN_PATTERNS contract', () => {
         try {
           parser.parseExpression(example.spel);
         } catch (error) {
-          failures.push(`${pattern.id}: ${JSON.stringify(example.spel)} -> ${(error as Error).message}`);
+          failures.push(
+            `${pattern.id}: ${JSON.stringify(example.spel)} -> ${(error as Error).message}`,
+          );
         }
       }
     }
@@ -94,9 +96,12 @@ describe('BUILTIN_PATTERNS contract', () => {
       for (const placeholder of remaining) {
         const key = placeholder.slice(1, -1);
         const declared =
-          Object.prototype.hasOwnProperty.call(pattern.slots, key) || builtinPlaceholders.includes(key);
+          Object.prototype.hasOwnProperty.call(pattern.slots, key) ||
+          builtinPlaceholders.includes(key);
         if (!declared) {
-          failures.push(`${pattern.id}: ${placeholder} is neither a slot nor a built-in placeholder`);
+          failures.push(
+            `${pattern.id}: ${placeholder} is neither a slot nor a built-in placeholder`,
+          );
         }
       }
     }

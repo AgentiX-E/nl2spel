@@ -183,6 +183,17 @@ is a deliberate choice, not a gap.
   sentence containing it fails rather than silently dropping it. Phrase it as a
   comparison (`订单状态等于已确认`) or a boolean field (`订单已确认` as a schema
   property) until a pattern covers it.
-- **Some boolean patterns are unreachable end-to-end.** `CN-BOOL-TRUE`,
-  `CN-BOOL-FALSE` and `CN-LOGIC-NOT` satisfy their own examples but are preempted
-  by higher-priority patterns for the same input. See the audit's D47/D48.
+- **Some patterns are shadowed on their own example.** `CN-BOOL-TRUE`,
+  `CN-BOOL-FALSE` and `CN-LOGIC-NOT` satisfy their isolated contract, but a
+  higher-priority pattern claims the input first for the phrasing each one
+  documents, so the documented phrasing does not reach them:
+
+  | Pattern | Its example | What actually matches | Still reachable via |
+  |---|---|---|---|
+  | `CN-BOOL-TRUE` | `用户是VIP` | `CN-PERM-ROLE` → `hasRole('VIP')` | `用户==VIP` |
+  | `CN-BOOL-FALSE` | `用户不是VIP` | `CN-NE-STATUS` → `#用户 != 'VIP'` | `用户非VIP` |
+  | `CN-LOGIC-NOT` | `不是有效` | `CN-COLL-CONTAINS` → `#不.contains('有效')` | `不是 a b` |
+
+  Each is reachable through another surface form, so none is dead code — but the
+  phrase each one advertises as its example gives a different answer. Fixing it
+  means adjusting pattern priorities, which is recorded rather than done.

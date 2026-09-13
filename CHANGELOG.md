@@ -2,6 +2,72 @@
 
 All notable changes to the NL2SpEL project.
 
+## [Unreleased]
+
+### Added
+- `pattern/clause-splitter.ts` — splits a compound sentence on its top-level
+  logical connectors and converts each clause independently, so a rule that joins
+  conditions is no longer answered with only its first clause. Exports
+  `splitClauses`, `decompose` and `UnconvertibleClauseError`.
+- `PatternMatcherOptions.fieldPolicy` (`'passthrough' | 'strict'`), default
+  `passthrough`, with `UnmappedFieldError` for the strict setting.
+- `PatternMatchResult.unmappedFields` — the field words emitted verbatim because
+  the dictionary had no entry, so the guess is never silent.
+- `docs/architecture.md` — pipeline stages, the guarantees of each entry point,
+  the field-resolution policy and the validation stages.
+- `docs/user-guide.md` — the verified natural-language phrasings and their SpEL,
+  the field policy, and the known limitations.
+- `builtin-patterns.contract.test.ts` — asserts every built-in pattern reproduces
+  its own declared `examples`, in isolation. This is the pattern specification.
+- `nl-to-spel-corpus.test.ts` — asserts the expression a caller actually receives
+  for a corpus of rules, end to end, where pattern priorities and clause
+  decomposition decide the outcome.
+- `clause-splitter.test.ts`, `field-policy.test.ts`,
+  `validation-pipeline-strictness.test.ts`, `template-engine-null-intent.test.ts`.
+
+### Changed
+- **A compound rule is refused rather than truncated.** A sentence joining
+  conditions is decomposed; if any clause cannot be converted, the request fails
+  with `UnconvertibleClauseError` naming that clause. Previously
+  `金额大于1000且订单已确认` returned `#amount > 1000`, silently dropping the
+  confirmation requirement. `and` is grouped to bind tighter than `or`, and every
+  operand is parenthesised.
+- **A pattern tagged `logic` is preferred over decomposition**, so `a and b` still
+  becomes `(a) and (b)` rather than being split into unconvertible clauses.
+- **Coverage thresholds raised to 95 on all four dimensions in all three
+  packages.** They were previously 90 for functions and lines everywhere, and 92
+  or 93 for statements and branches in the provider packages.
+- `validation-pipeline.ts` — literal boundaries no longer come from the engine's
+  lexer, so a validation verdict no longer depends on the engine build being able
+  to lex the expression. A lexer failure in the completeness gate is no longer
+  read as truncation.
+
+### Fixed
+- **Range templates emitted a nested list.** `CN-RANGE-BETWEEN` and
+  `EN-RANGE-BETWEEN` rendered `{{18, 60}}` instead of `{18, 60}`, so every range
+  rule was rejected by the engine.
+- **`AutoFixer` corrupted valid expressions.** It applied whole-string regexes
+  with no awareness of string literals and "balanced" brackets by counting
+  delimiters over the whole string, so it rewrote literal contents and appended
+  closers for delimiters it could only see inside literals — 4 of 9 valid
+  expressions were corrupted. Rewrites now apply only outside literals, and the
+  delimiter-counting repair is gone.
+- **The validation pipeline could not reject anything.** The type, semantic and
+  context stages pushed only warnings, while the verdict was computed from the
+  error list, so they were decorative: a truncated expression and an unknown
+  schema field both passed. Each stage now has a severity, a supplied
+  `contextSchema` makes an unresolved reference an error, and a final stage
+  rejects an expression that is manifestly incomplete.
+- **`不为空` produced `== null`.** The emptiness heuristic matched the negated
+  phrasing too, so both templates scored equally and the first — `== null` — won.
+  `非空` was not recognised as a null check at all, and the null templates leaked
+  the placeholder `field` into their output.
+- **Pattern field capture truncated Chinese field names.** `订单金额大于1000`
+  yielded `#订单 > 1000`: the lazy field group stopped early and the optional
+  operator-noun group swallowed the rest. Several patterns also failed to match
+  their own declared examples, and the selection and projection templates emitted
+  malformed SpEL.
+
 ## [1.1.1] — 2026-07-13
 
 ### Fixed

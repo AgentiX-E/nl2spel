@@ -641,7 +641,8 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     // truth word or a Latin word. A fully open marker would fire on function
     // words ("一个非常…"), and the lookbehind keeps a negator out of the field
     // ("用户不" is not the subject).
-    match: /^(?<field>[^\s，,、]+?)(?<![不非])\s*(?:是|为|等于|==)\s*(?:true|真|是|yes|[A-Za-z]\w*)$/,
+    match:
+      /^(?<field>[^\s，,、]+?)(?<![不非])\s*(?:是|为|等于|==)\s*(?:true|真|是|yes|[A-Za-z]\w*)$/,
     spelTemplate: '#{field} == true',
     slots: {},
     priority: 74,
@@ -655,7 +656,8 @@ export const BUILTIN_PATTERNS: PatternDefinition[] = [
     // Mirror of CN-BOOL-TRUE. The marker stays narrow so that function words
     // ("非常…") do not match, and the lookbehind keeps "不是有效" with
     // CN-LOGIC-NOT instead of capturing "不" as the field.
-    match: /^(?<field>[^\s，,、]+?)(?<![不非])\s*(?:不是|非|为|是|等于|==)\s*(?:false|假|否|no|[A-Za-z]\w*)$/,
+    match:
+      /^(?<field>[^\s，,、]+?)(?<![不非])\s*(?:不是|非|为|是|等于|==)\s*(?:false|假|否|no|[A-Za-z]\w*)$/,
     spelTemplate: '#{field} == false',
     slots: {},
     priority: 73,

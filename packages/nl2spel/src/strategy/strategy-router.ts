@@ -1,10 +1,6 @@
 import { PatternMatcher } from '../pattern/pattern-matcher.js';
 import { BUILTIN_PATTERNS } from '../pattern/builtin-patterns.js';
-import {
-  decompose,
-  splitClauses,
-  UnconvertibleClauseError,
-} from '../pattern/clause-splitter.js';
+import { decompose, splitClauses, UnconvertibleClauseError } from '../pattern/clause-splitter.js';
 import { IntentClassifier } from '../template/intent-classifier.js';
 import { TemplateEngine } from '../template/template-engine.js';
 import type { TemplateResult } from '../template/template-engine.js';

@@ -49,18 +49,7 @@ const INTENT_KEYWORDS: Record<NLIntent, { zh: string[]; en: string[] }> = {
     en: ['greater', 'less', 'equal', 'above', 'below', 'exceed', '>', '<', '==', '!=', '>=', '<='],
   },
   [NLIntent.NULL_CHECK]: {
-    zh: [
-      '为空',
-      '不为空',
-      '是空',
-      '非空',
-      '存在',
-      '不存在',
-      '有值',
-      '无值',
-      'null',
-      '没有值',
-    ],
+    zh: ['为空', '不为空', '是空', '非空', '存在', '不存在', '有值', '无值', 'null', '没有值'],
     en: ['null', 'empty', 'is null', 'is not null', 'is empty', 'is not empty'],
   },
   [NLIntent.PERMISSION_CHECK]: {
@@ -131,7 +120,14 @@ export type NullPredicatePolarity = 'affirmative' | 'negated';
  * inversion that made "备注不为空" select "== null". These are matched before
  * anything else.
  */
-const NULL_NEGATED_SPECIFIC = ['不为空', '不为null', '不是空', '非空', 'is not null', 'is not empty'];
+const NULL_NEGATED_SPECIFIC = [
+  '不为空',
+  '不为null',
+  '不是空',
+  '非空',
+  'is not null',
+  'is not empty',
+];
 
 /**
  * Affirmative null/emptiness spellings.
@@ -139,7 +135,16 @@ const NULL_NEGATED_SPECIFIC = ['不为空', '不为null', '不是空', '非空',
  * "不存在" is matched before the bare "存在" below, for the same embedding
  * reason as above.
  */
-const NULL_AFFIRMATIVE = ['不存在', '无值', '没有值', '为空', '为null', '是空', 'is null', 'is empty'];
+const NULL_AFFIRMATIVE = [
+  '不存在',
+  '无值',
+  '没有值',
+  '为空',
+  '为null',
+  '是空',
+  'is null',
+  'is empty',
+];
 
 /** Negated spellings that do not embed an affirmative one. */
 const NULL_NEGATED_GENERIC = ['有值', '存在'];

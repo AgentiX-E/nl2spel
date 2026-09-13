@@ -59,10 +59,8 @@ class MockEvaluator implements SpelEvaluator {
   }
 }
 
-const hasCode = (
-  result: { errors: Array<{ code: string }> },
-  code: string,
-): boolean => result.errors.some((e) => e.code === code);
+const hasCode = (result: { errors: Array<{ code: string }> }, code: string): boolean =>
+  result.errors.some((e) => e.code === code);
 
 describe('ValidationPipeline strictness (D18)', () => {
   const pipeline = new ValidationPipeline();
@@ -271,7 +269,10 @@ describe('ValidationPipeline strictness (D18)', () => {
     });
 
     it('keeps advisory codes out of the error list', async () => {
-      const result = await pipeline.validate("'hello' > 100 and #order.paid == #order.paid", schema);
+      const result = await pipeline.validate(
+        "'hello' > 100 and #order.paid == #order.paid",
+        schema,
+      );
       expect(result.valid).toBe(true);
       const codes = result.errors.map((e) => e.code);
       expect(codes).not.toContain('TYPE-STR_NUM_CMP');

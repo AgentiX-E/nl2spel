@@ -1,4 +1,3 @@
-
 /** Half-open character range `[start, end)` in the source expression. */
 interface Span {
   start: number;

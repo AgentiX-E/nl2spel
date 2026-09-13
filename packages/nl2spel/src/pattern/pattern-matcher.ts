@@ -347,5 +347,4 @@ export class PatternMatcher {
 
     return { expression: result.trim(), unmappedFields };
   }
-
 }

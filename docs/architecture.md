@@ -140,8 +140,17 @@ A dotted-free reference is accepted when it names a declared variable, function,
 root object, **or a field of the root**. The last case exists because the built-in
 patterns emit `#amount` rather than `#root.amount`.
 
-Bracket balance is computed from the tokenizer, so a delimiter inside a string
-literal is not counted: `#re matches '\d+('` is valid and is not reported.
+Bracket balance is computed on the expression with string-literal contents masked,
+so a delimiter inside a literal is not counted: `#re matches '\d+('` is valid and
+is not reported. Literal boundaries come from a quote-state scan, which is exact
+for SpEL — a quote character is always a literal delimiter — and does not require
+the engine to be able to lex the expression at all. That matters because the parse
+gate asks the lexer for the final token to spot a trailing operator, and an engine
+build that cannot lex a field name in Chinese would otherwise turn a capability
+gap into a "truncated" verdict. When the lexer fails, the only conclusion drawn is
+that an unterminated string literal makes the expression incomplete; whether the
+expression is *valid* for that engine is the parse stage's business, where the
+caller supplies the evaluator.
 
 ## Extension points
 

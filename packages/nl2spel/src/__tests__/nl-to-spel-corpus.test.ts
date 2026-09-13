@@ -32,7 +32,7 @@ describe('NL to SpEL corpus', () => {
     ['年龄大于18', '#age > 18'],
     ['姓名不为空', '#姓名 != null'],
     ['备注为空', '#remark == null'],
-    ['订单号以ORD开头', '#订单号.startsWith(\'ORD\')'],
+    ['订单号以ORD开头', "#订单号.startsWith('ORD')"],
     ['标题包含促销', "#title.contains('促销')"],
     ['是否已支付', '#已支付'],
     ['用户是VIP', "hasRole('VIP')"],
