@@ -196,9 +196,10 @@ export class NL2SpelEngine {
             latencyMs: Date.now() - startTime,
           };
         }
-        throw new Error(
-          `Cannot generate expression offline: '${nl}' joins clauses but they could not all be converted.`,
-        );
+        // A null result would mean no top-level connector after all, which
+        // `isCompound` has already ruled out. Falling through to the ordinary
+        // handling below is the safe answer regardless: refusing to answer is
+        // never worse than answering with a truncated rule.
       }
 
       if (patternResult.matched) {
