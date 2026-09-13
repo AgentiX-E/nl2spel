@@ -218,6 +218,10 @@ describe('ValidationPipeline strictness (D18)', () => {
       '#order.amount > 1000 and #order.status ==',
       '#order.amount +',
       '#order.status and',
+      // The textual `div` has no token kind on the engine build this package
+      // compiles against — it tokenizes as an identifier — so it has to be
+      // recognised by name or a truncated division passes as complete.
+      '#order.amount div',
     ];
 
     for (const expression of truncated) {
@@ -227,6 +231,14 @@ describe('ValidationPipeline strictness (D18)', () => {
         expect(hasCode(result, 'FINAL-TRUNCATED')).toBe(true);
       });
     }
+
+    it('does not mistake a property named after an operator for one', async () => {
+      // `div` is recognised by name, so the preceding-dot exemption has to hold
+      // or any schema with a `div` property would be rejected.
+      const result = await pipeline.validate('#order.div');
+      expect(hasCode(result, 'FINAL-TRUNCATED')).toBe(false);
+      expect(result.valid).toBe(true);
+    });
 
     it('reports the final stage as failed', async () => {
       const result = await pipeline.validate('#order.amount > 1000 and');

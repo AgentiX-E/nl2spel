@@ -505,14 +505,23 @@ export class ValidationPipeline {
     if (lastKind === null) return true;
     if (INCOMPLETE_TRAILING_TOKENS.has(lastKind)) return true;
 
-    // The textual operators `and`, `or`, `matches`, `between` and `instanceof`
-    // stay IDENTIFIER tokens; only their position makes them operators. A
-    // property such as `#order.and` is a name, so a preceding dot clears it.
-    if (lastKind === TokenKind.IDENTIFIER && lastLiteral !== undefined) {
-      const isWordOperator = WORD_OPERATORS.has(lastLiteral.toLowerCase());
-      if (isWordOperator && previousKind !== TokenKind.DOT && previousKind !== TokenKind.SAFE_NAV) {
-        return true;
-      }
+    // A textual operator may tokenize as its own kind or as a plain identifier,
+    // depending on the engine build — `and` and `or` stay IDENTIFIER, while `div`
+    // has a kind of its own on the newest engine and none on the one this package
+    // compiles against. The literal is therefore what identifies it, not the kind.
+    //
+    // Two exemptions keep this from over-reaching: a string literal's content is
+    // not an operator (`#order.status == 'and'` is complete), and a property may
+    // legitimately be named after an operator (`#order.div`).
+    if (
+      lastLiteral !== undefined &&
+      /^[A-Za-z]+$/.test(lastLiteral) &&
+      lastKind !== TokenKind.LITERAL_STRING &&
+      previousKind !== TokenKind.DOT &&
+      previousKind !== TokenKind.SAFE_NAV &&
+      WORD_OPERATORS.has(lastLiteral.toLowerCase())
+    ) {
+      return true;
     }
 
     return false;
@@ -587,7 +596,6 @@ const INCOMPLETE_TRAILING_TOKENS: ReadonlySet<TokenKind> = new Set([
   TokenKind.STAR,
   TokenKind.SLASH,
   TokenKind.PERCENT,
-  TokenKind.DIV,
   TokenKind.MOD,
   TokenKind.POWER,
   TokenKind.INC,
@@ -634,6 +642,14 @@ const WORD_OPERATORS: ReadonlySet<string> = new Set([
   'matches',
   'between',
   'instanceof',
+  // The textual operators in Spring's ALTERNATIVE_OPERATOR_NAMES (`eq`, `ne`,
+  // `div`, …) tokenize as their own kinds where the engine defines one, and as
+  // plain identifiers where it does not. `div` is the one that has no kind on
+  // the engine build this package compiles against — `1 div 2` tokenizes as
+  // IDENTIFIER — so it is listed here to keep `#a div` from passing as complete.
+  // A property named `div` is still safe: the preceding-dot guard below exempts
+  // `#order.div`.
+  'div',
 ]);
 
 /** Escape a field or root name so it can be embedded in a RegExp source. */
