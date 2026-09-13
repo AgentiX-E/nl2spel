@@ -59,8 +59,31 @@ describe('splitClauses', () => {
     expect(clauses.map((clause) => clause.text)).toEqual(["#msg == 'A and B'", '#count > 1']);
   });
 
+  it('handles a doubled quote escape inside a literal', () => {
+    // SpEL escapes a quote by doubling it, so the scanner must not treat the
+    // second `'` of `it''s` as the end of the literal.
+    expect(texts("#s == 'it''s and that' and #n > 1")).toEqual([
+      "#s == 'it''s and that'",
+      '#n > 1',
+    ]);
+  });
+
+  it('handles an unterminated literal without splitting into it', () => {
+    expect(texts("#s == 'A and B")).toEqual(["#s == 'A and B"]);
+  });
+
   it('ignores connectors inside brackets', () => {
     expect(texts('(a and b) or c')).toEqual(['(a and b)', 'c']);
+  });
+
+  it('recovers from an unmatched closing bracket', () => {
+    // A stray closer must not drive the depth negative and swallow the split.
+    expect(texts('a) and b')).toEqual(['a)', 'b']);
+  });
+
+  it('reports an empty input as a single empty clause', () => {
+    expect(texts('')).toEqual(['']);
+    expect(texts('   ')).toEqual(['']);
   });
 
   it('records a trailing connector as an empty clause', () => {

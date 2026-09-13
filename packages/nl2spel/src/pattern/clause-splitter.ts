@@ -112,9 +112,10 @@ function nextConnector(
     if (depth > 0) continue;
 
     for (const { pattern, operator } of CONNECTORS) {
+      // Sticky, so a hit means a hit at exactly this offset.
       pattern.lastIndex = i;
       const match = pattern.exec(input);
-      if (!match || match.index !== i) continue;
+      if (!match) continue;
       // An `and` directly between two numbers belongs to a range expression
       // (`amount between 100 and 500`), not to a conjunction.
       if (operator === 'and') {
