@@ -39,8 +39,8 @@ importers:
   packages/nl2spel:
     devDependencies:
       '@agentix-e/spel-ts':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^2.0.0
+        version: 2.0.0
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.20)(typescript@5.9.3)(yaml@2.9.0)
@@ -81,8 +81,8 @@ importers:
 
 packages:
 
-  '@agentix-e/spel-ts@1.2.2':
-    resolution: {integrity: sha512-xFLj+kxnBk0/nKXQDnECjs+s5CgsaYjqEY5JifE9VV7MSQe+svRngnL1elTsbZCbhimbK2O08+qFElmDYRGtaw==}
+  '@agentix-e/spel-ts@2.0.0':
+    resolution: {integrity: sha512-ng7cYGwLr6pMqazaglxoFyi8MzsjxER/5XLOgqcnqAWagT1sN886fFWLKtieKjheSYBXrhlN+ya8BBhGFJLxJg==}
 
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
@@ -1282,7 +1282,7 @@ packages:
 
 snapshots:
 
-  '@agentix-e/spel-ts@1.2.2': {}
+  '@agentix-e/spel-ts@2.0.0': {}
 
   '@ampproject/remapping@2.3.0':
     dependencies:

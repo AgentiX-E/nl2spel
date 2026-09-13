@@ -2,7 +2,7 @@
 
 All notable changes to the NL2SpEL project.
 
-## [Unreleased]
+## [1.4.0] — 2026-09-13
 
 ### Added
 - `pattern/clause-splitter.ts` — splits a compound sentence on its top-level
@@ -26,6 +26,10 @@ All notable changes to the NL2SpEL project.
   `validation-pipeline-strictness.test.ts`, `template-engine-null-intent.test.ts`.
 
 ### Changed
+- Development and verification now run against `@agentix-e/spel-ts` 2.0.0. The peer
+  range stays `>=1.1.0`, because every symbol this package takes from spel-ts is a type,
+  the consumed surface is unchanged between 1.2.2 and 2.0.0, and there is no runtime
+  import of it at all.
 - **A compound rule is refused rather than truncated.** A sentence joining
   conditions is decomposed; if any clause cannot be converted, the request fails
   with `UnconvertibleClauseError` naming that clause. Previously
@@ -67,6 +71,51 @@ All notable changes to the NL2SpEL project.
   operator-noun group swallowed the rest. Several patterns also failed to match
   their own declared examples, and the selection and projection templates emitted
   malformed SpEL.
+
+## [1.3.0] — 2026-07-19
+
+### Added
+- Open Graph tags, a meta description, a "What is X" section and an FAQ for the
+  landing page and the API documentation.
+
+### Changed
+- `LLMCapabilities` no longer carries `cost` or `latency`. Provider ordering is
+  external, so a provider is described by what it can do rather than by figures
+  that could not be substantiated; the README lost the claims that rested on them.
+- The `exports` order and the `.npmrc` were corrected, and the benchmark imports
+  repaired.
+
+## [1.2.2] — 2026-07-15
+
+### Added
+- CommonJS output: `tsup` now emits ESM and CJS, and the published `files` array
+  covers what it produces.
+
+### Fixed
+- Offline templates left unfilled slots in their output; a slot with no value is
+  now resolved with its default.
+
+## [1.2.1] — 2026-07-15
+
+### Fixed
+- The arbitrary `ContextSchema` depth limit is gone. Extraction recurses to the
+  bottom and detects circular references instead of stopping at a fixed depth.
+
+## [1.2.0] — 2026-07-15
+
+### Added
+- Recursive `ContextSchema` extraction, which had stopped at the top-level
+  properties.
+
+### Changed
+- Coverage thresholds raised to 95% on every dimension, and `vitest` moved to 3.x.
+- The `spel-ts` dependency moved to `^1.2.0`.
+
+## [1.1.2] — 2026-07-14
+
+### Fixed
+- Unused imports, configuration inconsistencies and type-safety defects.
+- Cross-repository links, badges and version references made coherent.
 
 ## [1.1.1] — 2026-07-13
 
