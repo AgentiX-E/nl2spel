@@ -243,7 +243,12 @@ describe('NL2SpelEngine', () => {
         root: {
           name: 'invoice',
           type: 'Invoice',
-          fields: { total: { type: 'number' as const } },
+          // `金额大于100` resolves to `#amount`, so the schema has to declare
+          // `amount` for the rule to be resolvable. It previously passed with a
+          // schema that did not, because the context stage could not reject
+          // anything; now that it can, a schema that disagrees with the
+          // generated reference fails — which is the point of supplying one.
+          fields: { amount: { type: 'number' as const } },
           methods: {},
         },
         variables: {},

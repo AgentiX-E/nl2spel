@@ -1,6 +1,6 @@
 import type { ContextSchema, SpelEvaluator } from '@agentix-e/spel-ts';
 import { TokenKind, Tokenizer } from '@agentix-e/spel-ts';
-import { maskStringLiterals } from './auto-fixer.js';
+import { hasUnterminatedStringLiteral, maskStringLiterals } from './auto-fixer.js';
 
 // ============================================================
 // Validation types
@@ -490,8 +490,16 @@ export class ValidationPipeline {
         lastLiteral = token.literal;
       }
     } catch {
-      // An unterminated string literal: the expression cannot be complete.
-      return true;
+      // The tokenizer could not lex the expression. That is not evidence of
+      // truncation: the usual cause is input this engine build cannot lex at
+      // all — a field name in Chinese, on a build without Unicode identifier
+      // support — and whether such an expression is valid is the parse stage's
+      // business, where the caller supplies the evaluator. Reporting "truncated"
+      // here would turn an engine capability gap into a validation failure.
+      //
+      // An unterminated string literal is the one lexer failure that does imply
+      // incompleteness, and it is detected without the lexer.
+      return hasUnterminatedStringLiteral(expression);
     }
 
     if (lastKind === null) return true;

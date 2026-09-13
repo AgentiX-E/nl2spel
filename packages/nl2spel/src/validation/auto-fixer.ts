@@ -1,4 +1,3 @@
-import { TokenKind, Tokenizer } from '@agentix-e/spel-ts';
 
 /** Half-open character range `[start, end)` in the source expression. */
 interface Span {
@@ -25,29 +24,49 @@ function scanStringLiterals(expression: string): LiteralScan {
   const spans: Span[] = [];
   let unterminatedQuote: string | null = null;
 
-  const tokenizer = new Tokenizer(expression);
-  try {
-    for (;;) {
-      const token = tokenizer.nextToken();
-      if (token.kind === TokenKind.EOF) break;
-      if (token.kind === TokenKind.LITERAL_STRING) {
-        spans.push({ start: token.startPos, end: token.endPos });
+  let i = 0;
+  while (i < expression.length) {
+    const quote = expression[i];
+    if (quote !== "'" && quote !== '"') {
+      i += 1;
+      continue;
+    }
+
+    const start = i;
+    i += 1;
+    let closed = false;
+    while (i < expression.length) {
+      if (expression[i] === quote) {
+        // SpEL escapes a quote by doubling it: 'it''s'.
+        if (expression[i + 1] === quote) {
+          i += 2;
+          continue;
+        }
+        i += 1;
+        closed = true;
+        break;
       }
+      i += 1;
     }
-  } catch (err) {
-    const position = (err as { position?: number }).position;
-    const start =
-      typeof position === 'number' && position >= 0 && position <= expression.length
-        ? position
-        : 0;
-    const quote = expression[start];
-    if (quote === "'" || quote === '"') {
+
+    spans.push({ start, end: i });
+    if (!closed) {
       unterminatedQuote = quote;
+      break;
     }
-    spans.push({ start, end: expression.length });
   }
 
   return { spans, unterminatedQuote };
+}
+
+/**
+ * Whether the expression ends inside a string literal.
+ *
+ * Exported for the validation pipeline's completeness gate, which needs to tell
+ * an unterminated literal from input it simply could not lex.
+ */
+export function hasUnterminatedStringLiteral(expression: string): boolean {
+  return scanStringLiterals(expression).unterminatedQuote !== null;
 }
 
 /**
@@ -75,12 +94,17 @@ export function maskStringLiterals(expression: string): string {
  * AutoFixer — rewrites the JavaScript spellings an LLM commonly emits into the
  * SpEL equivalents, without ever touching the contents of a string literal.
  *
- * The literal boundaries are derived from spel-ts's own `Tokenizer`, so the
- * notion of "inside a string literal" cannot drift from the parser: whatever
- * the parser treats as opaque text is left byte-identical. A whole-string
- * regex (the previous implementation) rewrote literal contents and appended
- * closers for delimiters it could only see inside literals, turning valid
- * expressions into broken ones.
+ * Literal boundaries come from a quote-state scan. In SpEL a quote character is
+ * always a string-literal delimiter — the language has no comments and no other
+ * construct that uses `'` or `"` — so the scan is exact by construction rather
+ * than an approximation of the parser. It is also independent of the engine
+ * build: deriving the boundaries from the lexer made every structural check
+ * depend on the lexer being able to tokenize the *whole* expression, which fails
+ * for input the engine cannot lex at all, such as a field name in Chinese on a
+ * build without Unicode identifier support. A whole-string regex (the previous
+ * implementation) rewrote literal contents and appended closers for delimiters
+ * it could only see inside literals, turning valid expressions into broken
+ * ones.
  */
 export class AutoFixer {
   public fix(expression: string): AutoFixResult {
