@@ -2,6 +2,7 @@ import { StrategyRouter, type StrategyRouterConfig } from '../strategy/strategy-
 import { ProviderRegistry } from '../provider/provider-registry.js';
 import type { LLMProvider } from '../provider/llm-provider.js';
 import type { PatternDefinition } from '../pattern/pattern-definition.js';
+import { splitClauses } from '../pattern/clause-splitter.js';
 import { IntentClassifier } from '../template/intent-classifier.js';
 import { ContextExtractor } from '../context/context-extractor.js';
 import type { ContextSchema, SpelEvaluator } from '@agentix-e/spel-ts';
@@ -172,6 +173,26 @@ export class NL2SpelEngine {
 
     // Offline mode
     if (options.offlineOnly) {
+      // A compound sentence is decomposed rather than matched whole. Matching the
+      // whole sentence would answer `金额大于1000且订单已确认` with
+      // `#amount > 1000` and drop the second requirement without any signal. When
+      // the clauses cannot all be converted the request fails, naming the clause
+      // it could not convert, rather than returning a partial rule.
+      if (splitClauses(nl).length > 1) {
+        const decomposition = this.router.decomposeClauses(nl);
+        if (decomposition) {
+          return {
+            expression: decomposition.expression,
+            strategy: 'pattern',
+            confidence: decomposition.confidence,
+            latencyMs: Date.now() - startTime,
+          };
+        }
+        throw new Error(
+          `Cannot generate expression offline: '${nl}' joins clauses but they could not all be converted.`,
+        );
+      }
+
       const patternMatcher = this.router.getPatternMatcher();
       const patternResult = patternMatcher.match(nl);
 

@@ -27,8 +27,9 @@ describe('splitClauses', () => {
     expect(clauses.map((clause) => clause.text)).toEqual(['甲', '乙']);
     expect(clauses[1]!.connector).toBe('or');
 
-    expect(splitClauses('甲或者乙')[1]!.connector).toBe('or');
-    expect(splitClauses('甲要么乙')[1]!.connector).toBe('or');
+    // 或者 must be consumed whole; a bare-或 alternative would leave a stray 者.
+    expect(texts('甲或者乙')).toEqual(['甲', '乙']);
+    expect(texts('甲要么乙')).toEqual(['甲', '乙']);
   });
 
   it('splits on English conjunctions only at word boundaries', () => {
@@ -36,8 +37,12 @@ describe('splitClauses', () => {
       'amount > 1000',
       'amount < 5000',
     ]);
-    // `android` merely contains "and" and must not split.
+    // `android` and `ampersand` merely contain the letters of "and" and must not
+    // split. Matching a slice rather than the whole input would lose the
+    // preceding character and turn these into conjunctions.
     expect(texts('android')).toEqual(['android']);
+    expect(texts('autofixtest double ampersand')).toEqual(['autofixtest double ampersand']);
+    expect(texts('record')).toEqual(['record']);
   });
 
   it('does not treat 和 as a conjunction', () => {

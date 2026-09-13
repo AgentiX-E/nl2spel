@@ -13,15 +13,23 @@
  * a partial rule is never emitted.
  */
 
-/** The connectors this module recognises, and the SpEL operator each maps to. */
+/**
+ * The connectors this module recognises, and the SpEL operator each maps to.
+ *
+ * These are sticky so they can be matched at an exact offset in the *whole*
+ * input: matching against a slice would make the `\b` in `\band\b` evaluate
+ * against the slice boundary instead of the real preceding character, and
+ * `ampersand` would then contain a conjunction. Longer alternatives come first
+ * so that `或者` is not consumed as `或` followed by a stray `者`.
+ */
 const CONNECTORS: ReadonlyArray<{ pattern: RegExp; operator: 'and' | 'or' }> = [
   // Chinese conjunctions. `和` is deliberately absent: it is a range separator in
   // `价格在10和20之间`, not a conjunction.
-  { pattern: /^(?:且|并且|同时|而且|、)/, operator: 'and' },
-  { pattern: /^(?:或|或者|要么)/, operator: 'or' },
+  { pattern: /(?:并且|且|同时|而且|、)/y, operator: 'and' },
+  { pattern: /(?:或者|或|要么)/y, operator: 'or' },
   // English conjunctions, matched as whole words.
-  { pattern: /^\band\b/i, operator: 'and' },
-  { pattern: /^\bor\b/i, operator: 'or' },
+  { pattern: /\band\b/iy, operator: 'and' },
+  { pattern: /\bor\b/iy, operator: 'or' },
 ];
 
 export interface Clause {
@@ -104,8 +112,9 @@ function nextConnector(
     if (depth > 0) continue;
 
     for (const { pattern, operator } of CONNECTORS) {
-      const match = pattern.exec(input.slice(i));
-      if (!match) continue;
+      pattern.lastIndex = i;
+      const match = pattern.exec(input);
+      if (!match || match.index !== i) continue;
       // An `and` directly between two numbers belongs to a range expression
       // (`amount between 100 and 500`), not to a conjunction.
       if (operator === 'and') {
