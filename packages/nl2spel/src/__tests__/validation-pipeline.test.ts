@@ -156,14 +156,18 @@ describe('ValidationPipeline', () => {
       expect(result.stages.context.passed).toBe(true);
     });
 
-    it('should warn on unknown field', async () => {
+    it('should reject an unknown field', async () => {
       const result = await pipeline.validate('#order.unknown > 100', schema);
-      expect(result.stages.context.warnings.length).toBeGreaterThan(0);
+      expect(result.stages.context.errors.length).toBeGreaterThan(0);
+      expect(result.stages.context.errors.some((e) => e.code === 'CTX-UNKNOWN_FIELD')).toBe(true);
+      expect(result.valid).toBe(false);
     });
 
-    it('should warn on unknown bean reference', async () => {
+    it('should reject an unknown bean reference', async () => {
       const result = await pipeline.validate('@unknownService', schema);
-      expect(result.stages.context.warnings.length).toBeGreaterThan(0);
+      expect(result.stages.context.errors.length).toBeGreaterThan(0);
+      expect(result.stages.context.errors.some((e) => e.code === 'CTX-UNKNOWN_BEAN')).toBe(true);
+      expect(result.valid).toBe(false);
     });
 
     it('should warn without ContextSchema', async () => {
@@ -177,9 +181,26 @@ describe('ValidationPipeline', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('should detect unknown variable', async () => {
+    it('should reject an unknown variable', async () => {
       const result = await pipeline.validate('#unknown > 100', schema);
-      expect(result.stages.context.warnings.length).toBeGreaterThan(0);
+      expect(result.stages.context.errors.length).toBeGreaterThan(0);
+      expect(result.stages.context.errors.some((e) => e.code === 'CTX-UNKNOWN_REF')).toBe(true);
+      expect(result.valid).toBe(false);
+    });
+
+    it('should accept a bare reference that names a root field', async () => {
+      // `#amount` is shorthand for the root's `amount` field.
+      const result = await pipeline.validate('#amount > 100', schema);
+      expect(result.valid).toBe(true);
+      expect(result.stages.context.errors).toHaveLength(0);
+    });
+
+    it('should accept an undeclared runtime object accessed through a property', async () => {
+      // A dotted reference names a property of some runtime object. The schema
+      // does not have to describe every object an evaluation context may hold.
+      const result = await pipeline.validate("#currentUser.role == 'admin'", schema);
+      expect(result.valid).toBe(true);
+      expect(result.stages.context.errors).toHaveLength(0);
     });
   });
 
