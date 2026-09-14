@@ -9,7 +9,13 @@ import { ProviderRegistry } from '../provider/provider-registry.js';
 import { ChineseNumberParser } from '../utils/chinese-number-parser.js';
 import { NLIntent } from '../template/nl-intent.js';
 import type { LLMProvider } from '../provider/llm-provider.js';
-import type { ContextSchema, LLMPrompt, LLMResponse } from '../index.js';
+import type {
+  ContextSchema,
+  LLMPrompt,
+  LLMResponse,
+  SpelEvaluator,
+  ParseResult,
+} from '../index.js';
 
 // ================================================================
 // Coverage Gap Fillers — targeted tests for remaining branch gaps
@@ -712,4 +718,129 @@ describe('Coverage Gap Fillers', () => {
       isAvailable: vi.fn().mockResolvedValue(true),
     };
   }
+});
+
+// ================================================================
+// vitest 4 re-measurement — branches the previous remapper attributed elsewhere
+//
+// Vitest 4 replaced the V8 remapper (v8-to-istanbul -> ast-v8-to-istanbul v1), so the branch
+// denominators and attributions are not comparable with the vitest 3 report. Re-running the
+// gate surfaced these as uncovered. Each one is a reachable path rather than dead code:
+// ContextSchema is a compile-time type, ParseError.code is optional, and a bare `#variable` is
+// valid SpEL.
+// ================================================================
+
+// ===== validation-pipeline.ts: lines 369, 370, 371, 373 — a ContextSchema with gaps =====
+// `variables ?? {}`, `functions ?? {}`, `beans ?? {}` and `root?.fields ?? {}` exist because
+// nothing at runtime stops a JavaScript caller from passing only the sections it has. The
+// pipeline has to fill those gaps rather than throw on the first one it reads.
+describe('validation-pipeline: a ContextSchema with sections missing', () => {
+  const pipeline = new ValidationPipeline();
+
+  it('validates a bare variable reference when only variables are declared', async () => {
+    const partial = { variables: { user: { type: 'object' } } } as unknown as ContextSchema;
+    const result = await pipeline.validate('#user', partial);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('accepts a root declared without a fields map', async () => {
+    const partial = { root: { name: 'order', type: 'Order' } } as unknown as ContextSchema;
+    const result = await pipeline.validate('#order', partial);
+    expect(result.valid).toBe(true);
+  });
+
+  it('reports an unresolvable reference rather than throwing on a near-empty schema', async () => {
+    const result = await pipeline.validate('#nobody', { types: {} } as unknown as ContextSchema);
+    expect(result.valid).toBe(false);
+    expect(result.errors.map((e) => e.code)).toContain('CTX-UNKNOWN_REF');
+  });
+});
+
+// ===== validation-pipeline.ts: line 577 — a bare `#variable` with no field access =====
+// The dotted pass collects `#user.name`; a bare `#user` is only reachable through the second
+// pass, whose push path had never run. The pair below separates "extracted and known" from
+// "never extracted": both go through the same code, and only the extraction can tell them
+// apart, because a reference that was never extracted is never checked either.
+describe('validation-pipeline: bare reference extraction', () => {
+  const pipeline = new ValidationPipeline();
+  const withUser = { variables: { user: { type: 'object' } } } as unknown as ContextSchema;
+
+  it('resolves `#user` on its own, not only `#user.name`', async () => {
+    expect((await pipeline.validate('#user', withUser)).valid).toBe(true);
+  });
+
+  it('flags a bare reference that is not declared, proving the bare pass ran', async () => {
+    const unknown = await pipeline.validate('#userMissing', withUser);
+    expect(unknown.errors.map((e) => e.code)).toContain('CTX-UNKNOWN_REF');
+  });
+});
+
+// ===== validation-pipeline.ts: line 222 — a ParseError the evaluator does not classify =====
+// `ParseError.code` is optional, so an evaluator is entitled to report a syntax error without
+// one. The pipeline defaults it rather than emitting a code of `PARSE-undefined`.
+describe('validation-pipeline: an evaluator reporting unclassified parse errors', () => {
+  it('defaults the error code to PARSE-SYNTAX', async () => {
+    const evaluator = {
+      parse: async (): Promise<ParseResult> => ({
+        valid: false,
+        errors: [{ message: 'unexpected end of input', position: 3 }],
+      }),
+      getContextSchema: () => null,
+    } as unknown as SpelEvaluator;
+    const result = await new ValidationPipeline(evaluator).validate('1 +', {
+      variables: {},
+    } as unknown as ContextSchema);
+    expect(result.errors.map((e) => e.code)).toContain('PARSE-SYNTAX');
+  });
+});
+
+// ===== context-extractor.ts: lines 63 and 83 — a root that is not an object =====
+// `typeof rootObject === 'object' ? ... : typeof rootObject` describes the root by its own
+// primitive type, and `extractFields` returns no fields for it. A JavaScript caller can pass
+// any value as the root, and both branches are the ones that handle the primitive case; the
+// returns are what a consumer sees, so they are asserted rather than merely executed.
+describe('context-extractor: a primitive root object', () => {
+  const extractor = new ContextExtractor();
+
+  it('describes the root by its primitive type and extracts no fields', () => {
+    const schema = extractor.extract({ rootObject: 42, rootName: 'answer' });
+    expect(schema.root!.name).toBe('answer');
+    expect(schema.root!.type).toBe('number');
+    expect(schema.root!.fields).toEqual({});
+  });
+
+  it('does the same for a string root', () => {
+    const schema = extractor.extract({ rootObject: 'text' });
+    expect(schema.root!.type).toBe('string');
+    expect(schema.root!.fields).toEqual({});
+  });
+});
+
+// ===== intent-classifier.ts: lines 203-226 — a pattern boost standing on its own =====
+// Each boost reads `intentScores.get(intent) ?? 0`. These phrases isolate the boost patterns
+// from the base keyword table, so each asserts the intent it is responsible for rather than
+// merely that the call returned.
+describe('intent-classifier: a pattern boost standing on its own', () => {
+  const classifier = new IntentClassifier();
+
+  it('recognises a range from "between X and Y"', () => {
+    expect(classifier.classify('amount between 100 and 200').primaryIntent).toBe(NLIntent.RANGE);
+  });
+
+  it('recognises a type check from a type phrase', () => {
+    expect(classifier.classify('user is an Admin type').primaryIntent).toBe(NLIntent.TYPE_CHECK);
+  });
+
+  it('recognises a projection from "each"', () => {
+    expect(classifier.classify('each item amount').primaryIntent).toBe(NLIntent.PROJECTION);
+  });
+
+  it('recognises a collection predicate from "isEmpty"', () => {
+    expect(classifier.classify('items isEmpty').primaryIntent).toBe(NLIntent.COLLECTION);
+  });
+
+  it('recognises a null check from a Chinese emptiness phrase', () => {
+    expect(classifier.classify('备注非空').primaryIntent).toBe(NLIntent.NULL_CHECK);
+  });
 });

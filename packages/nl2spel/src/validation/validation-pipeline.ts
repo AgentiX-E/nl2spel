@@ -271,7 +271,11 @@ export class ValidationPipeline {
     // If ContextSchema is provided, do deeper checks
     if (contextSchema?.root) {
       const rootRef = escapeRegExp(contextSchema.root.name);
-      for (const [fieldName, field] of Object.entries(contextSchema.root.fields)) {
+      // `fields` is required by the type but nothing enforces it at runtime, and the context
+      // stage below already tolerates its absence with `root?.fields ?? {}`. Without the same
+      // guard here a root declared without a fields map threw a TypeError out of `Object.entries`
+      // instead of being validated, which turned a caller's incomplete schema into a crash.
+      for (const [fieldName, field] of Object.entries(contextSchema.root.fields ?? {})) {
         const fieldRef = `#(?:${rootRef}\\.)?${escapeRegExp(fieldName)}`;
         if (field.type === 'boolean') {
           // Check boolean field compared with number
