@@ -20,7 +20,7 @@
     "playwright": "^1.61.1",
     "prettier": "^3.4.2",
     "typedoc": "^0.28.20",
-    "typescript": "^5.7.3",
+    "typescript": "^7.0.2",
     "vitest": "^3.0.0"
   },
   "engines": {
