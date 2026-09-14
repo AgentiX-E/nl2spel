@@ -1,0 +1,51 @@
+# Dependabot version updates.
+#
+# Security updates are a repository setting rather than a file: Dependabot opens those pull
+# requests on its own once the setting is on. This file is what keeps *versions* current,
+# and its absence is why every dependency in this suite had drifted far enough to collect
+# advisories at all.
+#
+# Each repository has one lockfile at its root — the two monorepos included, since pnpm
+# resolves the workspace from a single `pnpm-lock.yaml` — so one npm entry covers every
+# package inside.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: scope
+    labels:
+      - dependencies
+    # Minor and patch updates are grouped because they are reviewed the same way — the
+    # gates decide, and they are the ones that carried every advisory in this suite. A
+    # major is deliberately left on its own: it is the change that needs reading, and in
+    # this suite a major is what renumbered a token enum and moved nine words out of a
+    # tokenizer.
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Shanghai
+    commit-message:
+      prefix: "ci(deps)"
+    labels:
+      - dependencies
+      - github-actions
