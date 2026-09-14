@@ -362,6 +362,40 @@ describe('OpenAICompatibleProvider', () => {
     });
   });
 
+  describe('timeout', () => {
+    it('aborts a request that outlasts the configured timeout', async () => {
+      // `setTimeout(() => controller.abort(), timeoutMs)` is the only path that cancels a
+      // hanging request, and nothing had ever reached it: every other mock in this file
+      // resolves its fetch immediately, so the timer always lost the race and a broken abort
+      // would have gone unnoticed. This one leaves the request pending and watches the signal.
+      let aborted = false;
+      const mockFetch = vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              aborted = true;
+              reject(new DOMException('This operation was aborted', 'AbortError'));
+            });
+          }),
+      );
+      vi.stubGlobal('fetch', mockFetch);
+
+      const provider = new OpenAICompatibleProvider(
+        { provider: 'deepseek', apiKey: 'sk-test' },
+        createMockPromptBuilder(),
+      );
+
+      await expect(
+        provider.generate(createMockPromptBuilder().build('测试'), {
+          timeout: 25,
+          maxRetries: 0,
+        }),
+      ).rejects.toThrow();
+      expect(aborted).toBe(true);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // === generateStream() mocked tests ===
   describe('generateStream (mocked)', () => {
     it('should yield stream chunks', async () => {
