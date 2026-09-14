@@ -43,7 +43,7 @@ importers:
     devDependencies:
       '@agentix-e/spel-ts':
         specifier: ^2.0.0
-        version: 2.0.0
+        version: 2.0.2
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.28)(typescript@5.9.3)(yaml@2.9.0)
@@ -84,8 +84,8 @@ importers:
 
 packages:
 
-  '@agentix-e/spel-ts@2.0.0':
-    resolution: {integrity: sha512-ng7cYGwLr6pMqazaglxoFyi8MzsjxER/5XLOgqcnqAWagT1sN886fFWLKtieKjheSYBXrhlN+ya8BBhGFJLxJg==}
+  '@agentix-e/spel-ts@2.0.2':
+    resolution: {integrity: sha512-9TBhQdN8zwainN1eQCvtxF5SLG1mwpiEX4MofXl/2y9my8mj0nWN0VjgOK1Kox/mHMWkr9xv+yUD8QLR5rFbvQ==}
 
   '@babel/helper-string-parser@7.29.7':
     resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
@@ -952,7 +952,7 @@ packages:
 
 snapshots:
 
-  '@agentix-e/spel-ts@2.0.0': {}
+  '@agentix-e/spel-ts@2.0.2': {}
 
   '@babel/helper-string-parser@7.29.7': {}
 

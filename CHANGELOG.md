@@ -2,6 +2,28 @@
 
 All notable changes to the NL2SpEL project.
 
+## [1.4.1] — 2026-09-14
+
+### Fixed
+
+- **A context schema that declared a root without a `fields` map crashed the type stage.**
+  `validateTypes` read `Object.entries(contextSchema.root.fields)` directly, so an incomplete but
+  legal schema — a root named with nothing under it — threw a `TypeError` out of the pipeline
+  instead of being validated. The context stage below already tolerated the same input with
+  `root?.fields ?? {}`, and the two now agree.
+- **The trailing-punctuation strip was quadratic in the input, and the input is a prompt.** It ran
+  `replace(/[，,。.!！?？;；:：]+$/, '')`, which retries the quantified class from every offset when
+  the text does not end in the run the anchor is looking for: measured at 2.5 ms for 2 000
+  characters and 155 ms for 16 000, four times the work for twice the input. Since the text is
+  whatever a caller passes as natural language, a long prompt was a denial of service. It is a
+  single backward scan now, and the text it produces is unchanged — asserted against every builtin
+  pattern's own examples rather than a hand-written list.
+
+### Changed
+
+- `@agentix-e/spel-ts` moves to **2.0.2** in the lockfile. The declared range already allowed it.
+  The suite passes against the new version: 901 tests, run after the move.
+
 ## [1.4.0] — 2026-09-13
 
 ### Added
