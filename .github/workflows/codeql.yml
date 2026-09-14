@@ -1,0 +1,50 @@
+name: CodeQL
+
+# Code scanning is what this repository's `master-protection` ruleset already expects. Its
+# `code_scanning` rule names CodeQL and refuses a merge while a medium-or-higher security alert
+# is open, and until this workflow existed that rule had nothing to consult.
+#
+# The default query suite is used on purpose: it is the security suite, which is what the
+# ruleset's threshold measures. Widening to `security-and-quality` would add maintainability
+# queries and belongs in its own change, with its own triage.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Weekly, so a query added since the last commit still gets to look at the code. The time is
+    # off the hour to avoid GitHub's busiest scheduling minute.
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Required to upload the analysis results as code-scanning alerts.
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      # There is no build or autobuild step: CodeQL's JavaScript and TypeScript extractor reads
+      # the source itself, and `autobuild` would reach for npm in a pnpm workspace and fail.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
