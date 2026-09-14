@@ -165,8 +165,28 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VER_NUM="${VERSION#v}"
-          if grep -q "^## \[${VER_NUM}\]" CHANGELOG.md; then
-            awk "/^## \[${VER_NUM}\]/,/^## \[/" CHANGELOG.md | sed '1d;$d' | sed '/^---/d' > release-notes.md
+          # This version's section, up to the next one, with the `---` rules and the
+          # blank lines at either end dropped so the rendered release starts on content.
+          #
+          # The start match is consumed, which is what makes the range correct: with
+          # the previous `awk '/start/,/end/'` form the section's own heading satisfied
+          # both patterns, the range collapsed to that single line, `sed '1d;$d'`
+          # deleted it, and the file came out empty. The step still reported
+          # `has_notes=true`, so every release fell back to generated notes — v1.4.0's
+          # published body is "What's Changed" with PR links, not the section below.
+          awk -v ver="${VER_NUM}" '
+            index($0, "## [" ver "]") == 1 { inside = 1; next }
+            inside && index($0, "## [") == 1 { exit }
+            inside && $0 !~ /^---$/ { lines[++n] = $0 }
+            END {
+              first = 1
+              while (first <= n && lines[first] ~ /^[[:space:]]*$/) first++
+              last = n
+              while (last >= first && lines[last] ~ /^[[:space:]]*$/) last--
+              for (i = first; i <= last; i++) print lines[i]
+            }
+          ' CHANGELOG.md > release-notes.md
+          if [ -s release-notes.md ]; then
             echo "has_notes=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_notes=false" >> "$GITHUB_OUTPUT"
