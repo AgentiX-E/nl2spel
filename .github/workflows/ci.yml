@@ -93,7 +93,7 @@ jobs:
 
       - name: Upload coverage artifact (for Pages)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: |
@@ -129,7 +129,7 @@ jobs:
         run: node packages/nl2spel/benchmark.mjs > benchmark-results.txt
 
       - name: Upload benchmark artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: benchmark-results.txt
@@ -190,7 +190,7 @@ jobs:
           APIDOCEOF
 
       - name: Upload API docs artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-docs
           path: api-docs/
